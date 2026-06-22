@@ -1,0 +1,245 @@
+import { cpSync, existsSync, readdirSync, rmSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
+import { ensureDirectory } from "../core/bun-native-fs.ts";
+import { isEntrypoint } from "../core/script-entry.ts";
+import { logError, logHeading, logItem, logSuccess } from "../core/script-logger.ts";
+
+/**
+ * Local bundle directories that map directly to CloudFront origins later.
+ */
+export const publishOutputs = {
+  siteArtifacts: join(repoDirs.dist, "site-artifacts"),
+  siteAssets: join(repoDirs.dist, "site-assets"),
+} as const;
+
+const defaultDocsProject = "artifact-generator";
+
+/**
+ * Options for local publish bundle assembly.
+ */
+export interface AssembleSiteArtifactsOptions {
+  /**
+   * Project folder that receives the current docs preview.
+   */
+  readonly docsProject?: string;
+}
+
+/**
+ * A source-to-target copy operation in the publish bundle.
+ */
+interface CopyPlan {
+  /**
+   * Human readable label for logging.
+   */
+  label: string;
+  /**
+   * Whether the source must exist for publishing.
+   */
+  required: boolean;
+  /**
+   * Source file or directory.
+   */
+  source: string;
+  /**
+   * Target file or directory in the publish bundle.
+   */
+  target: string;
+}
+
+/**
+ * Returns true when a path exists and is a file.
+ *
+ * @param path - Path to inspect.
+ * @returns Whether the path is a file.
+ */
+function isFile(path: string): boolean {
+  return existsSync(path) && statSync(path).isFile();
+}
+
+/**
+ * Recursively walks files below a directory.
+ *
+ * @param directory - Directory to inspect.
+ * @returns Repo-relative file paths.
+ */
+function walkFiles(directory: string): string[] {
+  if (!existsSync(directory)) {
+    return [];
+  }
+
+  return readdirSync(directory).flatMap((entry) => {
+    const path = join(directory, entry);
+
+    if (statSync(path).isDirectory()) {
+      return walkFiles(path);
+    }
+
+    return [path];
+  });
+}
+
+/**
+ * Copies one required or optional path into the bundle.
+ *
+ * @param plan - Copy operation to execute.
+ */
+function copyPath(plan: CopyPlan): void {
+  if (!existsSync(plan.source)) {
+    if (plan.required) {
+      throw new Error(`Missing publish input: ${plan.source}`);
+    }
+
+    return;
+  }
+
+  ensureDirectory(dirname(plan.target));
+  rmSync(plan.target, { force: true, recursive: true });
+  cpSync(plan.source, plan.target, { dereference: true, recursive: true });
+  logItem(`${plan.label}: ${plan.target}`, 1);
+}
+
+/**
+ * Copies rendered diagram SVG files while leaving Mermaid sources out of the
+ * public bundle.
+ *
+ * @returns Number of copied SVG diagrams.
+ */
+export function copyRenderedDiagrams(): number {
+  const svgFiles = walkFiles(sourceInputDirs.diagrams).filter((path) => path.endsWith(".svg"));
+
+  for (const source of svgFiles) {
+    const target = join(
+      publishOutputs.siteArtifacts,
+      repoDirs.diagrams,
+      relative(sourceInputDirs.diagrams, source),
+    );
+
+    ensureDirectory(dirname(target));
+    cpSync(source, target, { dereference: true });
+  }
+
+  return svgFiles.length;
+}
+
+/**
+ * Deletes generated publish bundle directories.
+ */
+export function cleanPublishOutputs(): void {
+  rmSync(publishOutputs.siteArtifacts, { force: true, recursive: true });
+  rmSync(publishOutputs.siteAssets, { force: true, recursive: true });
+}
+
+/**
+ * Copies the current docs preview into the project-specific publish path.
+ *
+ * @param project - Project slug for the docs preview.
+ */
+export function copyDocsPreview(project = defaultDocsProject): void {
+  copyPath({
+    label: "Docs preview",
+    required: true,
+    source: dirname(artifactPaths.docsPreview),
+    target: join(publishOutputs.siteArtifacts, repoDirs.docs, project),
+  });
+}
+
+/**
+ * Copies shared content and static assets into publish bundle directories.
+ */
+export function copySharedPublishInputs(): void {
+  const plans: CopyPlan[] = [
+    {
+      label: "Manifests",
+      required: true,
+      source: sourceInputDirs.manifests,
+      target: join(publishOutputs.siteArtifacts, "manifests"),
+    },
+    {
+      label: "Profile content",
+      required: true,
+      source: sourceInputDirs.profile,
+      target: join(publishOutputs.siteArtifacts, "profile"),
+    },
+    {
+      label: "Project content",
+      required: true,
+      source: sourceInputDirs.projects,
+      target: join(publishOutputs.siteArtifacts, "projects"),
+    },
+    {
+      label: "Coverage report",
+      required: isFile(artifactPaths.coverageReport),
+      source: repoDirs.coverage,
+      target: join(publishOutputs.siteArtifacts, repoDirs.coverage),
+    },
+    {
+      label: "Project coverage report",
+      required: isFile(artifactPaths.coverageReport),
+      source: repoDirs.coverage,
+      target: join(publishOutputs.siteArtifacts, "projects", defaultDocsProject, repoDirs.coverage),
+    },
+    {
+      label: "Static assets",
+      required: false,
+      source: sourceInputDirs.assets,
+      target: join(publishOutputs.siteAssets, "assets"),
+    },
+    {
+      label: "Project icons",
+      required: true,
+      source: sourceInputDirs.icons,
+      target: join(publishOutputs.siteAssets, repoDirs.icons),
+    },
+    {
+      label: "Resume assets",
+      required: true,
+      source: sourceInputDirs.resume,
+      target: join(publishOutputs.siteAssets, "resume"),
+    },
+  ];
+
+  for (const plan of plans) {
+    copyPath(plan);
+  }
+}
+
+/**
+ * Builds static artifact and asset bundles for S3/CloudFront publishing.
+ *
+ * @returns Publish output directories and copied diagram count.
+ */
+export function assembleSiteArtifacts(options: AssembleSiteArtifactsOptions = {}): {
+  readonly diagramCount: number;
+  readonly siteArtifacts: string;
+  readonly siteAssets: string;
+} {
+  cleanPublishOutputs();
+
+  logHeading("Assembling site artifact bundle", { count: 10 });
+
+  const diagramCount = copyRenderedDiagrams();
+  logItem(`Rendered diagrams: ${diagramCount}`, 1);
+
+  copyDocsPreview(options.docsProject);
+  copySharedPublishInputs();
+
+  logSuccess("Assembled site artifact bundle");
+
+  return {
+    diagramCount,
+    siteArtifacts: publishOutputs.siteArtifacts,
+    siteAssets: publishOutputs.siteAssets,
+  };
+}
+
+/* istanbul ignore next */
+if (isEntrypoint(import.meta.url)) {
+  try {
+    const [docsProject] = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+    assembleSiteArtifacts(docsProject ? { docsProject } : {});
+  } catch (error) {
+    logError(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}

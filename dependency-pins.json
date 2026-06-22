@@ -1,0 +1,14 @@
+{
+  "string-width": {
+    "version": "4.2.3",
+    "reason": "Keep Mermaid CLI Puppeteer yargs on a CommonJS-compatible string-width version so diagram rendering works on Node."
+  },
+  "tar-fs": {
+    "version": "2.1.4",
+    "reason": "Fix high-severity vulnerabilities pulled through the Mermaid CLI Puppeteer dependency chain."
+  },
+  "ws": {
+    "version": "8.21.0",
+    "reason": "Fix a high-severity DoS vulnerability pulled through the Mermaid CLI Puppeteer dependency chain."
+  }
+}

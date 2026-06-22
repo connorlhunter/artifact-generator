@@ -1,0 +1,70 @@
+{
+  "name": "artifact-generator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.13",
+  "description": "Artifact Generator for architecture documentation and diagrams",
+  "scripts": {
+    "audit": "bun run deps:policy:check && bun audit --audit-level=high",
+    "artifacts:assemble": "bun scripts/publish/assemble-site-artifacts.ts",
+    "artifacts:build": "bun run test:coverage && bun run build && bun run artifacts:sync-source && bun scripts/publish/build-site-artifacts.ts",
+    "artifacts:publish": "bun scripts/publish/publish-site-artifacts.ts",
+    "artifacts:ship": "bun run artifacts:build && bun run artifacts:publish",
+    "artifacts:sync-source": "bun scripts/publish/sync-source-inputs.ts",
+    "deps:policy": "bun scripts/dependencies/sync-dependency-policy.ts",
+    "deps:policy:check": "bun scripts/dependencies/sync-dependency-policy.ts --check",
+    "build": "bun scripts/core/clean-dist.ts && bun x tsgo -p tsconfig.json",
+    "typecheck": "bun x tsgo --noEmit -p tsconfig.json",
+    "format": "bun x prettier --write . --ignore-unknown",
+    "format:check": "bun x prettier --check . --ignore-unknown",
+    "lint": "bun x eslint .",
+    "test": "bun run build && bun test --isolate",
+    "test:bun": "bun run test",
+    "test:one": "bun run build && bun test --isolate",
+    "test:coverage": "bun run build && bun scripts/coverage/clean-coverage.ts && bun test --isolate --coverage && bun scripts/coverage/render-coverage-report.ts",
+    "coverage:open": "bun run test:coverage && bun dist/scripts/coverage/open-coverage-report.js",
+    "docs:render": "bun run build && bun dist/scripts/docs/render-docs-preview.js",
+    "docs:open": "bun scripts/docs/open-docs-preview.ts",
+    "docs:render:open": "bun run build && bun dist/scripts/docs/render-open-docs-preview.js",
+    "diagrams:validate": "bun run build && bun dist/scripts/diagrams/validate-diagrams.js",
+    "diagrams:render": "bun run build && bun dist/scripts/diagrams/render-diagrams.js",
+    "diagrams:open": "bun run build && bun dist/scripts/diagrams/open-diagrams.js",
+    "diagrams:render:open": "bun run build && bun dist/scripts/diagrams/render-open-diagrams.js",
+    "prepare": "bun scripts/git-hooks/setup-git-hooks.ts",
+    "verify": "bun run audit && bun run format:check && bun run lint && bun run typecheck && bun run test"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "bun x prettier --write",
+      "bun x eslint --fix"
+    ],
+    "*.md": [
+      "bun x prettier --write",
+      "bun x eslint --fix"
+    ],
+    "*.{json,html}": [
+      "bun x prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@eslint/markdown": "^8.0.2",
+    "@mermaid-js/mermaid-cli": "^11.15.0",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^25.9.1",
+    "@typescript/native-preview": "^7.0.0-dev.20260603.1",
+    "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "lint-staged": "^17.0.7",
+    "marked": "^18.0.4",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.60.1"
+  },
+  "overrides": {
+    "string-width": "4.2.3",
+    "tar-fs": "2.1.4",
+    "ws": "8.21.0"
+  }
+}
