@@ -34,7 +34,7 @@ interface ProjectManifest {
 export function projectSlugsFromManifest(manifestPath = projectManifestPath): string[] {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectManifest;
 
-  return Object.keys(manifest.projects).sort((left, right) => left.localeCompare(right));
+  return Object.keys(manifest.projects);
 }
 
 /**

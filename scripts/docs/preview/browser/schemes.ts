@@ -297,7 +297,9 @@ async function applyThemedProjectIcon(
 
   icon.setAttribute("src", href);
   const themedHref = await themedProjectIconHref(href);
-  if (activePreviewScheme().id === scheme.id) icon.setAttribute("src", themedHref);
+  if (icon.isConnected && activePreviewScheme().id === scheme.id) {
+    icon.setAttribute("src", themedHref);
+  }
 }
 
 /**
@@ -325,6 +327,8 @@ function applyProjectFavicon(state: PreviewState, scheme: PreviewScheme): void {
 
   state.projectFavicon.setAttribute("href", faviconHref);
   void themedProjectIconHref(faviconHref).then((themedHref) => {
+    if (state.signal.aborted) return;
+
     const activeArticle = state.articleById.get(state.activeArticleId);
     const fallbackFaviconHref = state.projectFavicon
       ? projectIconHref(state.projectFavicon)

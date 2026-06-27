@@ -159,6 +159,183 @@ function fileRow(file: CoverageFile): string {
   </tr>`;
 }
 
+const coverageThemeStorageKeys = ["connorhunter.theme.scheme", "portfolio.theme.scheme"] as const;
+const coverageThemeSchemes = {
+  atlas: {
+    accent: "#0f6b7a",
+    accentSoft: "#e4f3f5",
+    bg: "#f4f6f8",
+    border: "#d8dee8",
+    colorScheme: "light",
+    muted: "#667085",
+    panel: "#ffffff",
+    text: "#17202a",
+  },
+  paper: {
+    accent: "#68737a",
+    accentSoft: "#ecefed",
+    bg: "#f6f6f3",
+    border: "#dcdfdc",
+    colorScheme: "light",
+    muted: "#697176",
+    panel: "#ffffff",
+    text: "#1f2528",
+  },
+  citrine: {
+    accent: "#766f18",
+    accentSoft: "#eeebc7",
+    bg: "#f7f6ea",
+    border: "#dedbb8",
+    colorScheme: "light",
+    muted: "#70705c",
+    panel: "#fffef8",
+    text: "#20231a",
+  },
+  harbor: {
+    accent: "#35b8cd",
+    accentSoft: "#0e2f3a",
+    bg: "#111a24",
+    border: "#2a3a4c",
+    colorScheme: "dark",
+    muted: "#7d92a8",
+    panel: "#1a2636",
+    text: "#dde4ee",
+  },
+  midnight: {
+    accent: "#5fc0ee",
+    accentSoft: "#0d3040",
+    bg: "#06111a",
+    border: "#1f3547",
+    colorScheme: "dark",
+    muted: "#89a6b8",
+    panel: "#0b1a24",
+    text: "#eaf6ff",
+  },
+  onyx: {
+    accent: "#8fb4ff",
+    accentSoft: "#182234",
+    bg: "#0b0d10",
+    border: "#2a3139",
+    colorScheme: "dark",
+    muted: "#9aa4ad",
+    panel: "#14181d",
+    text: "#edf0f2",
+  },
+  rose: {
+    accent: "#9e4c58",
+    accentSoft: "#f1e6e8",
+    bg: "#fbf6f7",
+    border: "#e2d2d5",
+    colorScheme: "light",
+    muted: "#74676b",
+    panel: "#ffffff",
+    text: "#241b1e",
+  },
+  tide: {
+    accent: "#3f82a8",
+    accentSoft: "#e4f0f6",
+    bg: "#f2f8fb",
+    border: "#d2e2ea",
+    colorScheme: "light",
+    muted: "#627584",
+    panel: "#ffffff",
+    text: "#17242c",
+  },
+  ember: {
+    accent: "#df6532",
+    accentSoft: "#ffe8d8",
+    bg: "#fff7e8",
+    border: "#efd8bd",
+    colorScheme: "light",
+    muted: "#7a6658",
+    panel: "#fffdf9",
+    text: "#251a12",
+  },
+  quartz: {
+    accent: "#7c6f9f",
+    accentSoft: "#eeeaf8",
+    bg: "#f7f5fb",
+    border: "#ddd7ed",
+    colorScheme: "light",
+    muted: "#706b7a",
+    panel: "#ffffff",
+    text: "#211f29",
+  },
+} as const;
+
+function coverageThemeCss(): string {
+  const themeBlocks = Object.entries(coverageThemeSchemes)
+    .map(
+      ([scheme, tokens]) => `:root[data-scheme="${scheme}"] {
+      color-scheme: ${tokens.colorScheme};
+      --bg: ${tokens.bg};
+      --panel: ${tokens.panel};
+      --text: ${tokens.text};
+      --muted: ${tokens.muted};
+      --border: ${tokens.border};
+      --accent: ${tokens.accent};
+      --accent-soft: ${tokens.accentSoft};
+    }`,
+    )
+    .join("\n\n    ");
+
+  const atlas = coverageThemeSchemes.atlas;
+
+  return `:root {
+      color-scheme: ${atlas.colorScheme};
+      --bg: ${atlas.bg};
+      --panel: ${atlas.panel};
+      --text: ${atlas.text};
+      --muted: ${atlas.muted};
+      --border: ${atlas.border};
+      --accent: ${atlas.accent};
+      --accent-soft: ${atlas.accentSoft};
+    }
+
+    ${themeBlocks}`;
+}
+
+function coverageThemeScript(): string {
+  return `<script>
+    (() => {
+      const schemes = new Set(${JSON.stringify(Object.keys(coverageThemeSchemes))});
+      const storageKeys = ${JSON.stringify([...coverageThemeStorageKeys])};
+      const messageSuffix = ".theme.scheme";
+      const fallback = window.matchMedia?.("(prefers-color-scheme: dark)").matches
+        ? "midnight"
+        : "atlas";
+
+      function savedScheme() {
+        for (const key of storageKeys) {
+          try {
+            const value = window.localStorage.getItem(key);
+            if (schemes.has(value)) return value;
+          } catch {}
+        }
+        return null;
+      }
+
+      function applyScheme(scheme) {
+        if (!schemes.has(scheme)) return;
+        document.documentElement.dataset.scheme = scheme;
+        try {
+          window.localStorage.setItem(storageKeys[0], scheme);
+        } catch {}
+      }
+
+      applyScheme(savedScheme() || fallback);
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message || typeof message !== "object") return;
+        if (!schemes.has(message.scheme)) return;
+        if (typeof message.type === "string" && !message.type.endsWith(messageSuffix)) return;
+        applyScheme(message.scheme);
+      });
+    })();
+  </script>`;
+}
+
 /**
  * Renders a compact HTML coverage report from parsed LCOV records.
  *
@@ -170,88 +347,120 @@ export function renderCoverageHtml(files: CoverageFile[]): string {
   const rows = [total, ...files].map(fileRow).join("\n");
 
   return `<!doctype html>
-<html lang="en">
+<html data-scheme="atlas" lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Artifact Generator Coverage</title>
   <style>
+    ${coverageThemeCss()}
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      background: #ffffff;
-      color: #17202a;
-      font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font: 0.9375rem/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     main {
-      width: min(100% - 32px, 1100px);
+      width: min(100%, 72rem);
       margin: 0 auto;
-      padding: 32px 0;
+      padding: clamp(1.25rem, 4vw, 3rem);
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
     }
 
     h1 {
-      margin: 0 0 6px;
-      font-size: 28px;
-      line-height: 1.2;
+      margin: 0;
+      font-size: clamp(1.75rem, 4vw, 2.75rem);
+      line-height: 1.05;
     }
 
     p {
-      margin: 0 0 22px;
-      color: #667085;
+      margin: 0.5rem 0 0;
+      color: var(--muted);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background: var(--panel);
     }
 
     table {
       width: 100%;
+      min-width: 46rem;
       border-collapse: collapse;
-      overflow: hidden;
-      border: 1px solid #d8dee8;
-      border-radius: 8px;
-      background: #fff;
-      box-shadow: 0 18px 50px rgb(23 32 42 / 8%);
     }
 
     th,
     td {
-      border-bottom: 1px solid #d8dee8;
-      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1rem;
       text-align: left;
       vertical-align: top;
     }
 
-    tr:last-child th,
-    tr:last-child td {
-      border-bottom: 0;
+    thead th {
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0;
+      text-transform: uppercase;
     }
 
     tbody tr:first-child {
-      background: #eef3f6;
-      font-weight: 700;
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      font-weight: 800;
+    }
+
+    tbody tr:last-child th,
+    tbody tr:last-child td {
+      border-bottom: 0;
     }
 
     td span {
       display: block;
-      color: #667085;
-      font-size: 12px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
     }
   </style>
+  ${coverageThemeScript()}
 </head>
 <body>
   <main>
-    <h1>Artifact Generator Coverage</h1>
-    <p>This report is generated from Bun LCOV output for the Artifact Generator repository.</p>
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">File</th>
-          <th scope="col">Lines</th>
-          <th scope="col">Functions</th>
-          <th scope="col">Branches</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
+    <header>
+      <div>
+        <h1>Artifact Generator Coverage</h1>
+        <p>Bun test coverage generated from the Artifact Generator test suite.</p>
+      </div>
+    </header>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">File</th>
+            <th scope="col">Lines</th>
+            <th scope="col">Functions</th>
+            <th scope="col">Branches</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
   </main>
 </body>
 </html>`;

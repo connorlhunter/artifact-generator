@@ -8,13 +8,10 @@
  * surface. The sidebars fill their grid cells and scroll independently if their
  * own content overflows.
  *
- * GPU COMPOSITING
- * `transform: translateZ(0)` on `nav` and `.page-outline` promotes them to
- * their own GPU compositing layers. The browser can repaint each column
- * independently no full-page repaints during scroll. `will-change: transform`
- * is added on :hover/active states only (not globally) to avoid wasting VRAM.
- * `contain` isolates scroll columns and cards so layout/paint work stays
- * bounded without estimating variable-height Markdown documents during scroll.
+ * PAINT ISOLATION
+ * The outline and document cards use containment so their layout and paint work
+ * stays bounded. The nav remains uncontained because its desktop collapse grip
+ * is fixed to the viewport edge.
  *
  * SCROLL ISOLATION
  * `overscroll-behavior: contain` on every scrolling column prevents scroll
@@ -27,11 +24,6 @@
  * Safari, and Edge. Both use the same CSS variables so colour stays in sync
  * with the selected scheme. Track is transparent so the scrollbar floats over the
  * background rather than adding a visible gutter.
- *
- * SIDEBAR FADE
- * `mask-image` with a linear gradient on both sidebars creates a soft fade-out
- * at the bottom, hinting that content continues without an abrupt cutoff.
- * Removed on mobile where the left panel becomes an overlay drawer.
  *
  * FONT RENDERING
  * `-webkit-font-smoothing: antialiased` and `text-rendering: optimizeLegibility`
@@ -321,8 +313,12 @@ body {
 /*LAYOUT */
 
 .layout {
+  --nav-column-width: clamp(16.25rem, 22vw, 20rem);
+
   display: grid;
-  grid-template-columns: minmax(16.25rem, 20rem) minmax(0, 1fr) minmax(13.75rem, 17.5rem);
+  grid-template-columns:
+    var(--nav-drag-width, var(--nav-column-width)) minmax(0, 1fr)
+    minmax(13.75rem, 17.5rem);
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -336,6 +332,8 @@ body {
 /*NAV (LEFT SIDEBAR) */
 
 nav {
+  position: relative;
+  z-index: 2;
   height: 100vh;
   height: 100dvh;
   overflow-y: auto;
@@ -344,26 +342,198 @@ nav {
   border-right: 1px solid var(--border);
   background: var(--panel);
   padding: 1.25rem 1.125rem;
-  transform: translateZ(0);
-  contain: layout paint style;
-  mask-image: linear-gradient(to bottom, black calc(100% - 2.5rem), transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 2.5rem), transparent 100%);
 }
 
 .nav-resize-handle {
   display: none;
 }
 
+@media (min-width: 861px) {
+  .layout.is-desktop-nav-collapsed {
+    grid-template-columns: 0 minmax(0, 1fr) minmax(13.75rem, 17.5rem);
+  }
+
+  nav.is-desktop-nav-collapsed {
+    overflow: visible;
+    border-right: 0;
+    padding: 0;
+    contain: none;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  nav.is-desktop-nav-collapsed > :not(.nav-resize-handle) {
+    display: none;
+  }
+
+  .nav-resize-handle {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: max(0px, calc(var(--nav-drag-width, var(--nav-column-width)) - 0.875rem));
+    z-index: 8;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 100dvh;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: ew-resize;
+    opacity: 0;
+    touch-action: none;
+    transition:
+      opacity var(--motion-fast),
+      transform var(--motion-fast);
+  }
+
+  .nav-resize-handle span {
+    width: 0.3rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 72%, var(--accent));
+    box-shadow:
+      0 0 0 0.25rem color-mix(in srgb, var(--panel) 86%, transparent),
+      1px 0 0 rgb(255 255 255 / 18%);
+    transition:
+      background-color var(--motion-fast),
+      box-shadow var(--motion-fast);
+  }
+
+  nav.is-desktop-nav-collapsed .nav-resize-handle {
+    left: 0;
+    opacity: 1;
+  }
+
+  nav:hover .nav-resize-handle,
+  .nav-resize-handle:focus-visible,
+  .is-resizing-desktop-nav .nav-resize-handle,
+  nav.is-desktop-nav-magnetized .nav-resize-handle {
+    opacity: 1;
+  }
+
+  .nav-resize-handle:hover,
+  .nav-resize-handle:focus-visible,
+  .is-resizing-desktop-nav .nav-resize-handle {
+    transform: translate3d(1px, 0, 0);
+  }
+
+  nav.is-desktop-nav-magnetized .nav-resize-handle span {
+    background: var(--accent);
+    box-shadow:
+      0 0 0 0.3rem color-mix(in srgb, var(--panel) 84%, var(--accent-soft)),
+      0 0 0 0.45rem color-mix(in srgb, var(--accent) 18%, transparent),
+      var(--shadow-sm);
+  }
+
+  .nav-resize-handle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -0.35rem;
+  }
+}
+
 .nav-controls {
   position: sticky;
   top: -1.25rem;
   z-index: 2;
+  overflow: visible;
   transform: translate3d(0, 0, 0);
   margin: -1.25rem -1.125rem 1.25rem;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
-  padding: 1.25rem 1.125rem 0.125rem;
   backface-visibility: hidden;
+}
+
+.nav-controls.is-nav-controls-collapsed {
+  height: 0;
+  top: 0;
+  border-bottom-width: 0;
+}
+
+.nav-controls-content {
+  max-height: 100%;
+  overflow: hidden;
+  padding: 1.25rem 1.125rem 1rem;
+}
+
+.nav-controls.is-nav-controls-collapsed .nav-controls-content {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.nav-controls-handle {
+  position: absolute;
+  right: 0;
+  bottom: -0.875rem;
+  left: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ns-resize;
+  opacity: 0;
+  touch-action: none;
+  transition:
+    opacity var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.nav-controls-handle span {
+  width: 2.75rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 72%, var(--accent));
+  box-shadow:
+    0 0 0 0.25rem color-mix(in srgb, var(--panel) 86%, transparent),
+    0 1px 0 rgb(255 255 255 / 18%);
+  transition:
+    background-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.nav-controls:hover .nav-controls-handle,
+.nav-controls.is-nav-controls-collapsed .nav-controls-handle,
+.nav-controls.is-nav-controls-magnetized .nav-controls-handle,
+.is-resizing-nav-controls .nav-controls-handle,
+.nav-controls-handle:hover,
+.nav-controls-handle:focus-visible {
+  opacity: 1;
+}
+
+.nav-controls-handle:hover,
+.nav-controls-handle:focus-visible,
+.is-resizing-nav-controls .nav-controls-handle {
+  transform: translate3d(0, -1px, 0);
+}
+
+.nav-controls.is-nav-controls-magnetized .nav-controls-handle span {
+  background: var(--accent);
+  box-shadow:
+    0 0 0 0.3rem color-mix(in srgb, var(--panel) 84%, var(--accent-soft)),
+    0 0 0 0.45rem color-mix(in srgb, var(--accent) 18%, transparent),
+    var(--shadow-sm);
+}
+
+.nav-controls-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -0.35rem;
+}
+
+.is-resizing-desktop-nav,
+.is-resizing-desktop-nav body {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.is-resizing-nav-controls,
+.is-resizing-nav-controls body {
+  cursor: ns-resize;
+  user-select: none;
 }
 
 .nav-header {
@@ -1041,6 +1211,8 @@ main {
 
 .nav-group a:hover,
 .nav-group a:focus-visible,
+.nav-controls-handle:hover,
+.nav-controls-handle:focus-visible,
 .nav-resize-handle:hover,
 .nav-resize-handle:focus-visible,
 .scheme-toggle:hover,
@@ -1060,7 +1232,13 @@ main {
 
 @media (max-width: 1160px) {
   .layout {
-    grid-template-columns: minmax(15rem, 18.75rem) minmax(0, 1fr);
+    --nav-column-width: clamp(15rem, 26vw, 18.75rem);
+
+    grid-template-columns: var(--nav-drag-width, var(--nav-column-width)) minmax(0, 1fr);
+  }
+
+  .layout.is-desktop-nav-collapsed {
+    grid-template-columns: 0 minmax(0, 1fr);
   }
 
   .page-outline {
@@ -1084,7 +1262,7 @@ main {
     left: 0;
     z-index: 10;
     height: 40dvh;
-    min-height: 2.5rem;
+    min-height: 0;
     max-height: min(82dvh, var(--nav-max-h, 82dvh));
     overflow: auto;
     overscroll-behavior: none;
@@ -1099,9 +1277,29 @@ main {
     transform: none;
   }
 
+  .nav-controls,
+  .nav-controls.is-nav-controls-collapsed {
+    height: auto !important;
+    top: -1.25rem;
+    border-bottom-color: var(--border);
+    transition: none;
+  }
+
+  .nav-controls.is-nav-controls-collapsed .nav-controls-content {
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .nav-controls-handle {
+    display: none;
+  }
+
   nav.is-nav-collapsed {
-    overflow: hidden;
+    overflow: visible;
+    border-bottom-width: 0;
+    background: transparent;
     padding: 0;
+    box-shadow: none;
   }
 
   nav.is-nav-collapsed > :not(.nav-resize-handle) {
@@ -1109,32 +1307,29 @@ main {
   }
 
   .nav-resize-handle {
-    position: sticky;
-    bottom: 0;
-    z-index: 3;
+    position: fixed;
+    top: calc(var(--mobile-nav-height, 40dvh) - 1.125rem);
+    right: 0;
+    left: 0;
+    z-index: 11;
     display: grid;
     place-items: center;
     transform: translate3d(0, 0, 0);
-    width: calc(100% + 2.25rem);
+    width: 100%;
     height: 2.25rem;
-    margin: 1rem -1.125rem 0;
+    margin: 0;
+    padding: 0;
     border: 0;
-    border-top: 1px solid var(--border);
-    background: color-mix(in srgb, var(--panel) 96%, var(--accent-soft));
+    background: transparent;
     cursor: ns-resize;
+    opacity: 1;
     touch-action: none;
     transition: transform var(--motion-fast);
     backface-visibility: hidden;
   }
 
   nav.is-nav-collapsed .nav-resize-handle {
-    position: relative;
-    bottom: auto;
-    width: 100%;
-    height: 2.5rem;
-    margin: 0;
-    border-top: 0;
-    background: color-mix(in srgb, var(--panel) 96%, var(--accent-soft));
+    top: -1.125rem;
   }
 
   .nav-resize-handle span {
@@ -1151,8 +1346,15 @@ main {
   .nav-resize-handle:hover,
   .nav-resize-handle:focus-visible,
   .is-resizing-nav .nav-resize-handle {
-    background: color-mix(in srgb, var(--panel) 96%, var(--accent-soft));
     transform: translate3d(0, -1px, 0);
+  }
+
+  nav.is-nav-magnetized .nav-resize-handle span {
+    background: var(--accent);
+    box-shadow:
+      0 0 0 0.3rem color-mix(in srgb, var(--panel) 84%, var(--accent-soft)),
+      0 0 0 0.45rem color-mix(in srgb, var(--accent) 18%, transparent),
+      var(--shadow-sm);
   }
 
   .nav-resize-handle:focus-visible {
@@ -1166,13 +1368,17 @@ main {
     user-select: none;
   }
 
+  .is-resizing-nav .nav-resize-handle {
+    transition: none;
+  }
+
   main {
     min-height: 0;
     height: 100dvh;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    padding-top: calc(2.5rem + 1rem);
+    padding-top: 1.75rem;
   }
 
   .doc.has-github .doc-header,
@@ -1198,6 +1404,7 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .nav-group a,
   .nav-resize-handle,
+  .nav-controls-handle,
   .scheme-toggle,
   .github-link,
   .doc-source summary,
@@ -1209,6 +1416,7 @@ main {
 
   .nav-group a:hover,
   .nav-resize-handle:hover,
+  .nav-controls-handle:hover,
   .scheme-toggle:hover,
   .github-link:hover,
   .doc-source summary:hover,

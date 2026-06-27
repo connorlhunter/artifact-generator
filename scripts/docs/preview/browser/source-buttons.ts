@@ -9,6 +9,8 @@ function wireSourceButtons(state: PreviewState): void {
         const source = button.closest(".doc-source")?.querySelector("code")?.textContent || "";
         try {
           await navigator.clipboard.writeText(source);
+          if (state.signal.aborted) return;
+
           button.textContent = "Copied";
           const resetTimer = window.setTimeout(() => {
             button.textContent = "Copy";

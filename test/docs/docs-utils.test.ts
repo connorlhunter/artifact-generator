@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
@@ -69,6 +69,42 @@ describe("docs utils", () => {
     expect(inputs[0]).toBe(markdownPaths.fixtureDocsIndex);
     expect(inputs).toEqual(
       expect.arrayContaining([markdownPaths.fixtureDocsIndex, markdownPaths.fixtureNestedGuide]),
+    );
+  });
+
+  test("maps S3 source-cache docs to logical artifact paths", () => {
+    const sourcePath = `${sourceInputDirs.docs}/${repoFixtureProjectName}/artifact-generator-overview.md`;
+    const logicalPath = `docs/${repoFixtureProjectName}/artifact-generator-overview.md`;
+
+    copyFixtureFile(markdownPaths.fixtureProjectOverview, sourcePath);
+
+    const docs = findMarkdownDocs([`${sourceInputDirs.docs}/${repoFixtureProjectName}`]);
+
+    expect(docs).toEqual([
+      {
+        id: docId(logicalPath),
+        input: logicalPath,
+        project: repoFixtureProjectName,
+        sourcePath: normalizeRepoPath(sourcePath),
+      },
+    ]);
+    expect(docs[0]?.input).not.toContain("artifact-generator-source-cache");
+  });
+
+  test("includes root pipeline docs only with Artifact Generator", () => {
+    const artifactGeneratorRoot = `${sourceInputDirs.docs}/artifact-generator`;
+    const cipherRoot = `${sourceInputDirs.docs}/cipher`;
+    const sharedDoc = `${sourceInputDirs.docs}/script-overview.md`;
+
+    copyFixtureFile(markdownPaths.fixtureProjectOverview, sharedDoc);
+    copyFixtureFile(markdownPaths.fixtureProjectOverview, `${artifactGeneratorRoot}/overview.md`);
+    copyFixtureFile(markdownPaths.fixtureProjectOverview, `${cipherRoot}/overview.md`);
+
+    expect(findMarkdownDocs([artifactGeneratorRoot]).map((doc) => doc.input)).toContain(
+      "docs/script-overview.md",
+    );
+    expect(findMarkdownDocs([cipherRoot]).map((doc) => doc.input)).not.toContain(
+      "docs/script-overview.md",
     );
   });
 
@@ -211,7 +247,19 @@ describe("docs utils", () => {
           project: "external",
         },
       ]).map(([project]) => project),
-    ).toEqual(["root", "general-docs", "external", "artifact-generator", "ledger"]);
+    ).toEqual(["artifact-generator", "ledger", "external", "root", "general-docs"]);
+    mkdirSync(sourceInputDirs.manifests, { recursive: true });
+    writeFileSync(
+      `${sourceInputDirs.manifests}/project-artifacts.json`,
+      JSON.stringify({
+        projects: {
+          "connor-hunter": {},
+          "artifact-generator": {},
+          cipher: {},
+          "cipher-pay": {},
+        },
+      }),
+    );
     expect(
       orderedDocGroups([
         {
@@ -235,7 +283,7 @@ describe("docs utils", () => {
           project: "connor-hunter",
         },
       ]).map(([project]) => project),
-    ).toEqual(["artifact-generator", "cipher", "cipher-pay", "connor-hunter"]);
+    ).toEqual(["connor-hunter", "artifact-generator", "cipher", "cipher-pay"]);
     expect(
       orderedDocsForPreview([
         {
@@ -255,9 +303,9 @@ describe("docs utils", () => {
         },
       ]).map((doc) => doc.input),
     ).toEqual([
+      markdownPaths.fixtureProjectOverview,
       "README.md",
       markdownPaths.fixtureSharedScriptOverview,
-      markdownPaths.fixtureProjectOverview,
     ]);
     expect(
       orderedDocGroups(findMarkdownDocs([markdownPaths.fixtureProjectOverview])).map(

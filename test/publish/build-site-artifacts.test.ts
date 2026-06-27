@@ -18,7 +18,7 @@ describe("build site artifacts", () => {
     rmSync(tempDir, { force: true, recursive: true });
   });
 
-  test("reads stable project slugs from the shared manifest", () => {
+  test("preserves project slugs from the shared manifest order", () => {
     writeFileSync(
       "project-artifacts.json",
       JSON.stringify({
@@ -30,8 +30,8 @@ describe("build site artifacts", () => {
     );
 
     expect(projectSlugsFromManifest("project-artifacts.json")).toEqual([
-      "alpha-app",
       "zeta-service",
+      "alpha-app",
     ]);
   });
 });

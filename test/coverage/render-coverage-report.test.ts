@@ -49,7 +49,9 @@ describe("render coverage report", () => {
       },
     ]);
     expect(html).toContain("Artifact Generator Coverage");
-    expect(html).toContain("background: #ffffff");
+    expect(html).toContain('data-scheme="atlas"');
+    expect(html).toContain("connorhunter.theme.scheme");
+    expect(html).toContain('message.type.endsWith(messageSuffix)');
     expect(html).toContain("75.00%");
     expect(html).toContain("50.00%");
     expect(html).toContain("scripts/example.ts");

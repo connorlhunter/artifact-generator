@@ -4,6 +4,7 @@ import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constan
 import { ensureDirectory } from "../core/bun-native-fs.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logError, logHeading, logItem, logSuccess } from "../core/script-logger.ts";
+import { isHiddenSourcePath } from "./source-input-exclusions.ts";
 
 /**
  * Local bundle directories that map directly to CloudFront origins later.
@@ -80,6 +81,16 @@ function walkFiles(directory: string): string[] {
 }
 
 /**
+ * Returns true when a project source file lives below a coverage directory.
+ *
+ * @param path - Path relative to the project source root.
+ * @returns Whether the path belongs to project-owned coverage output.
+ */
+function isProjectCoveragePath(path: string): boolean {
+  return path.split(/[\\/]+/).includes(repoDirs.coverage);
+}
+
+/**
  * Copies one required or optional path into the bundle.
  *
  * @param plan - Copy operation to execute.
@@ -145,6 +156,43 @@ export function copyDocsPreview(project = defaultDocsProject): void {
 }
 
 /**
+ * Copies project markdown/content without republishing project-owned coverage.
+ *
+ * @returns Number of copied project content files.
+ */
+export function copyProjectContent(): number {
+  if (!existsSync(sourceInputDirs.projects)) {
+    throw new Error(`Missing publish input: ${sourceInputDirs.projects}`);
+  }
+
+  const targetRoot = join(publishOutputs.siteArtifacts, "projects");
+  rmSync(targetRoot, { force: true, recursive: true });
+
+  let copied = 0;
+
+  for (const source of walkFiles(sourceInputDirs.projects)) {
+    const relativePath = relative(sourceInputDirs.projects, source);
+
+    if (isProjectCoveragePath(relativePath)) {
+      continue;
+    }
+
+    if (isHiddenSourcePath(relativePath)) {
+      continue;
+    }
+
+    const target = join(targetRoot, relativePath);
+    ensureDirectory(dirname(target));
+    cpSync(source, target, { dereference: true });
+    copied += 1;
+  }
+
+  logItem(`Project content: ${targetRoot}`, 1);
+
+  return copied;
+}
+
+/**
  * Copies shared content and static assets into publish bundle directories.
  */
 export function copySharedPublishInputs(): void {
@@ -162,19 +210,13 @@ export function copySharedPublishInputs(): void {
       target: join(publishOutputs.siteArtifacts, "profile"),
     },
     {
-      label: "Project content",
-      required: true,
-      source: sourceInputDirs.projects,
-      target: join(publishOutputs.siteArtifacts, "projects"),
-    },
-    {
       label: "Coverage report",
       required: isFile(artifactPaths.coverageReport),
       source: repoDirs.coverage,
       target: join(publishOutputs.siteArtifacts, repoDirs.coverage),
     },
     {
-      label: "Project coverage report",
+      label: "Artifact Generator project coverage report",
       required: isFile(artifactPaths.coverageReport),
       source: repoDirs.coverage,
       target: join(publishOutputs.siteArtifacts, "projects", defaultDocsProject, repoDirs.coverage),
@@ -198,6 +240,8 @@ export function copySharedPublishInputs(): void {
       target: join(publishOutputs.siteAssets, "resume"),
     },
   ];
+
+  copyProjectContent();
 
   for (const plan of plans) {
     copyPath(plan);

@@ -13,7 +13,11 @@ function installCleanup(state: PreviewState): CleanupFn {
     cancelPendingMobileNavResize(state);
     state.resetTimers.forEach((timer) => window.clearTimeout(timer));
     state.resetTimers.clear();
-    document.documentElement.classList.remove("is-resizing-nav");
+    document.documentElement.classList.remove(
+      "is-resizing-desktop-nav",
+      "is-resizing-nav",
+      "is-resizing-nav-controls",
+    );
     clearWindowCleanup(state, cleanup);
   };
 

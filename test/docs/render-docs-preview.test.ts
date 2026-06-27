@@ -87,7 +87,19 @@ describe("render docs preview", () => {
     expect(html).toContain('document.querySelector("[data-doc-nav]")');
     expect(html).toContain('document.querySelector("[data-doc-main]")');
     expect(html).toContain('document.querySelector("[data-page-outline]")');
-    expect(html).toContain('data-nav-resize-handle aria-label="Resize navigation panel"');
+    expect(html).toContain(
+      'data-nav-resize-handle aria-label="Resize navigation panel" aria-expanded="true"',
+    );
+    expect(html).toContain("data-doc-layout");
+    expect(html).toContain("data-nav-controls-content");
+    expect(html).toContain("data-nav-controls-handle");
+    expect(html).toContain("Hide navigation controls");
+    expect(html).toContain('title="Hide navigation controls"');
+    expect(html).toContain("wireNavControlsResize");
+    expect(html).toContain("mobileNavSnapHeights");
+    expect(html).toContain("nextMobileNavSnapHeight");
+    expect(html).toContain("wireDesktopNavResize");
+    expect(html).toContain("docs.preview.navigation.collapsed");
     expect(html).toContain("wireMobileNavResize");
     expect(html).toContain("clampMobileNavHeight");
     expect(html).toContain("mobileNavCollapsedHeight");
@@ -110,7 +122,7 @@ describe("render docs preview", () => {
     expect(html).toContain("scrollContainerTo");
     expect(html).toContain("scrollTargetIntoContainer");
     expect(html).toContain("prefers-reduced-motion: reduce");
-    expect(html).toContain("state.navResizeHandle?.getBoundingClientRect().height");
+    expect(html).toContain("magneticPosition");
     expect(html).toContain("wireDocNavigation");
     expect(html).toContain("wireOutlineNavigation");
     expect(html).toContain("window.history.pushState");
@@ -144,7 +156,7 @@ describe("render docs preview", () => {
     expect(html).toContain("height: 100vh");
     expect(html).toContain("overflow-y: auto");
     expect(html).toContain("position: fixed");
-    expect(html).toContain("padding-top: calc(2.5rem + 1rem)");
+    expect(html).toContain("padding-top: 1.75rem");
     expect(html).toContain("<summary><span>Open source</span></summary>");
     expect(html).toContain('content: "Close source";');
     expect(html).toContain("<h2>Index</h2>");
@@ -157,6 +169,9 @@ describe("render docs preview", () => {
     expect(html).toContain(">Index</a>");
     expect(html).toContain(
       '<a target="_blank" rel="noopener" href="diagrams/diagram-style-key.html">Diagram Key</a>',
+    );
+    expect(html).toContain(
+      '<a target="_blank" rel="noopener" href="https://example.com/project">Fixture Project</a>',
     );
     expect(html).toContain('<a href="#doc-docs-fixture-nested-guide-md">Nested Guide</a>');
     expect(html).not.toContain("file:///Users/");
@@ -196,6 +211,23 @@ describe("render docs preview", () => {
       repo: "example/docs",
     });
     expect(parseDocsPreviewOptions(["--github-branch=docs-preview"]).github).toBeUndefined();
+  });
+
+  test("renders source-cache docs with logical artifact paths", async () => {
+    spyOn(console, "log").mockImplementation(() => undefined);
+    copyFixtureFile(
+      markdownPaths.fixtureProjectOverview,
+      `${sourceInputDirs.docs}/artifact-generator/artifact-generator-overview.md`,
+    );
+
+    await renderDocsPreview(["artifact-generator"]);
+    const html = readFileSync(docsPreviewOutput, "utf8");
+
+    expect(html).toContain("docs/artifact-generator/artifact-generator-overview.md");
+    expect(html).toContain('id="doc-docs-artifact-generator-artifact-generator-overview-md"');
+    expect(html).not.toContain(sourceInputRoot);
+    expect(html).not.toContain("artifact-generator-source-cache");
+    expect(html).not.toContain("var/folders");
   });
 
   test("exits when no markdown docs are available", async () => {

@@ -62,29 +62,34 @@ ${themeBootstrapScript()}
   </script>
 </head>
 <body>
-  <div class="layout">
+  <div class="layout" data-doc-layout>
     <nav aria-label="Documentation" data-doc-nav>
       <div class="nav-controls" data-nav-controls>
-        <div class="nav-header">
-          <div class="nav-title-row">
-            <div class="nav-brand">
-              ${titleProjectIconHtml(page.projectIcon)}
-              <h1>${escapeHtml(page.title)}</h1>
+        <div class="nav-controls-content" id="navigation-controls" data-nav-controls-content>
+          <div class="nav-header">
+            <div class="nav-title-row">
+              <div class="nav-brand">
+                ${titleProjectIconHtml(page.projectIcon)}
+                <h1>${escapeHtml(page.title)}</h1>
+              </div>
+              <button class="scheme-toggle" type="button" data-scheme-toggle aria-label="Use Paper color scheme">
+                <span class="scheme-toggle-dot" aria-hidden="true"></span>
+              </button>
             </div>
-            <button class="scheme-toggle" type="button" data-scheme-toggle aria-label="Use Paper color scheme">
-              <span class="scheme-toggle-dot" aria-hidden="true"></span>
-            </button>
+            <p class="nav-count">${page.documentCount} documents</p>
           </div>
-          <p class="nav-count">${page.documentCount} documents</p>
+          <label class="nav-search">
+            <span>Search</span>
+            <input type="search" data-doc-search-input placeholder="Filter docs">
+          </label>
+          <p class="search-empty" data-search-empty hidden>No matching docs</p>
         </div>
-        <label class="nav-search">
-          <span>Search</span>
-          <input type="search" data-doc-search-input placeholder="Filter docs">
-        </label>
-        <p class="search-empty" data-search-empty hidden>No matching docs</p>
+        <button class="nav-controls-handle" type="button" data-nav-controls-handle aria-label="Hide navigation controls" aria-controls="navigation-controls" aria-expanded="true" title="Hide navigation controls">
+          <span aria-hidden="true"></span>
+        </button>
       </div>
       ${page.navigationHtml}
-      <button class="nav-resize-handle" type="button" data-nav-resize-handle aria-label="Resize navigation panel">
+      <button class="nav-resize-handle" type="button" data-nav-resize-handle aria-label="Resize navigation panel" aria-expanded="true" title="Resize navigation panel">
         <span aria-hidden="true"></span>
       </button>
     </nav>
