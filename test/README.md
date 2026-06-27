@@ -43,9 +43,13 @@ All tests run on Bun's native isolated test runner:
 
 ```text
 bun run test          -> build, then bun test --isolate
-bun run test:bun      -> alias for test
-bun run test:one      -> build, then bun test --isolate with extra args
 bun run test:coverage -> build, bun coverage, and HTML coverage rendering
+```
+
+Pass a test path after `--` when running a focused test:
+
+```bash
+bun run test -- test/docs/docs-utils.test.ts
 ```
 
 Tests import from `bun:test`:
