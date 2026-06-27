@@ -5,7 +5,15 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: ["node_modules/**", "coverage/**", "dist/**", "_work/**", "**/*.svg", "bun.lock"],
+    ignores: [
+      "node_modules/**",
+      "coverage/**",
+      "dist/**",
+      "tmp/**",
+      "_work/**",
+      "**/*.svg",
+      "bun.lock",
+    ],
   },
   {
     files: ["**/*.md"],
