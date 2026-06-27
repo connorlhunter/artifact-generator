@@ -41,10 +41,18 @@ describe("docs preview assets", () => {
       "overflow-wrap: break-word",
       "@media (max-width: 860px)",
       ".nav-controls",
+      ".nav-controls-handle",
+      ".is-nav-controls-collapsed",
       ".github-link",
       ".scheme-toggle",
       ".project-icon",
       ".nav-resize-handle",
+      ".is-nav-magnetized",
+      ".is-desktop-nav-magnetized",
+      ".is-nav-controls-magnetized",
+      ".layout.is-desktop-nav-collapsed",
+      "--nav-drag-width",
+      "grid-template-columns: 0 minmax(0, 1fr)",
       "height: 100dvh",
       "-webkit-overflow-scrolling: touch",
       "scrollbar-gutter: stable",
@@ -57,6 +65,12 @@ describe("docs preview assets", () => {
       expect(docsPreviewStyles).toContain(schemeHook);
     });
 
+    expect(docsPreviewStyles).toContain(
+      ".nav-controls.is-nav-controls-collapsed .nav-controls-content {\n    visibility: visible;",
+    );
+    expect(docsPreviewStyles).toContain(".nav-controls-handle {\n    display: none;");
+    expect(docsPreviewStyles).toContain(".is-resizing-nav .nav-resize-handle");
+    expect(docsPreviewStyles).toContain("background: transparent");
     expect(docsPreviewStyles).not.toContain("transition: all");
   });
 
@@ -79,6 +93,8 @@ describe("docs preview assets", () => {
     expect(script).toContain('addEventListener("pagehide", cleanup');
     expect(script).toContain("window.cancelAnimationFrame");
     expect(script).toContain("window.clearTimeout");
+    expect(script).toContain("state.pendingFrame = 0");
+    expect(script).toContain("state.signal.aborted");
     expect(script).toContain("pendingResizeFrame");
     expect(script).toContain("cancelPendingMobileNavResize");
     expect(script).toContain("No matching docs");
@@ -105,6 +121,17 @@ describe("docs preview assets", () => {
     expect(script).toContain('addEventListener("message"');
     expect(script).toContain('addEventListener("storage"');
     expect(script).toContain("wireMobileNavResize");
+    expect(script).toContain("wireNavControlsResize");
+    expect(script).toContain("wireDesktopNavResize");
+    expect(script).toContain("magneticPosition");
+    expect(script).toContain("navMagnetDistance = 28");
+    expect(script).toContain("navMagnetReleaseDistance = 44");
+    expect(script).toContain("mobileNavSnapHeights");
+    expect(script).toContain("nearestMobileNavSnapHeight");
+    expect(script).toContain("nextMobileNavSnapHeight");
+    expect(script).toContain("docs.preview.navigation.controls.collapsed");
+    expect(script).toContain("docs.preview.navigation.collapsed");
+    expect(script).toContain("is-desktop-nav-collapsed");
     expect(script).toContain("wireDocNavigation");
     expect(script).toContain("wireOutlineNavigation");
     expect(script).toContain("previewScrollBehavior");
@@ -113,7 +140,10 @@ describe("docs preview assets", () => {
     expect(script).toContain("activateHashTarget");
     expect(script).toContain("setPointerCapture");
     expect(script).toContain("hasPointerCapture");
+    expect(script).toContain('window.addEventListener("pointermove"');
+    expect(script).toContain('window.addEventListener("pointerup"');
     expect(script).toContain("requestMobileNavResize");
+    expect(script).toContain("state.docNav.scrollTop = 0");
     expect(script).toContain("mobileNavCollapsedHeight");
     expect(script).toContain("is-nav-collapsed");
     expect(script).toContain("jumpMainToArticle");
@@ -121,6 +151,10 @@ describe("docs preview assets", () => {
     expect(script).toContain("docs.preview.scheme");
     expect(script).toContain("portfolio.theme.scheme");
     expect(script).toContain("connorhunter.me");
+
+    const listenerCount = script.match(/\.addEventListener\(/gu)?.length ?? 0;
+    const listenerSignalCount = script.match(/signal: state\.signal/gu)?.length ?? 0;
+    expect(listenerSignalCount).toBe(listenerCount);
   });
 
   test("keeps browser client behavior split by responsibility", async () => {

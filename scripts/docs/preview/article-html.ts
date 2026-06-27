@@ -35,7 +35,14 @@ function isPreviewDiagramHref(href: string): boolean {
 }
 
 /**
- * Creates a Marked renderer that opens diagram viewer links in a new tab.
+ * Returns true when an href points to an external web page.
+ */
+function isExternalWebHref(href: string): boolean {
+  return /^https?:\/\//iu.test(href);
+}
+
+/**
+ * Creates a Marked renderer that opens diagram and external links in a new tab.
  *
  * @returns Marked renderer.
  */
@@ -45,7 +52,7 @@ function docsPreviewRenderer(): Renderer {
 
   renderer.link = (token: Tokens.Link): string => {
     const linkHtml = defaultLinkRenderer(token);
-    if (!isPreviewDiagramHref(token.href)) return linkHtml;
+    if (!isPreviewDiagramHref(token.href) && !isExternalWebHref(token.href)) return linkHtml;
 
     return linkHtml.replace(/^<a /, '<a target="_blank" rel="noopener" ');
   };

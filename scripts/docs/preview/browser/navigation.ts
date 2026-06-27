@@ -167,6 +167,7 @@ function updateActiveHeading(
 function requestActiveUpdate(state: PreviewState): void {
   if (state.pendingFrame) return;
   state.pendingFrame = window.requestAnimationFrame(() => {
+    state.pendingFrame = 0;
     updateActiveArticle(state);
     updateActiveHeading(state, "auto");
   });
