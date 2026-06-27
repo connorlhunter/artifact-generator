@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 import { formatDocLabel, formatDocSectionTitle } from "./docs-labels.ts";
 
@@ -107,18 +107,20 @@ export const docsPreviewOutput = artifactPaths.docsPreview;
 
 const docsRoot = sourceInputDirs.docs;
 const logicalDocsRoot = repoDirs.docs;
+const artifactGeneratorProject = "artifact-generator";
 const generalDocsProject = "general-docs";
 const rootProject = "root";
 const projectIconFile = "mark.svg";
 const nonProjectIconGroups = new Set([rootProject, generalDocsProject, repoDirs.test]);
 const priorityDocGroups = new Map([
-  [rootProject, 0],
-  [generalDocsProject, 1],
-  [repoDirs.test, 2],
+  [rootProject, 9000],
+  [generalDocsProject, 9001],
+  [repoDirs.test, 9002],
 ]);
 const ignoredDirs = new Set([".git", repoDirs.coverage, repoDirs.dist, repoDirs.nodeModules]);
 const ignoredFiles = new Set(["temp.md"]);
 const overviewDocSuffix = "-overview.md";
+const projectManifestPath = join(sourceInputDirs.manifests, "project-artifacts.json");
 
 /**
  * Returns true when a path exists and is a directory.
@@ -254,12 +256,18 @@ function directMarkdownFiles(dir: string): string[] {
 }
 
 /**
- * Returns docs that should appear in every scoped Markdown preview.
+ * Returns root-level pipeline docs for the Artifact Generator preview.
  *
+ * @param {string[]} roots - Resolved docs roots selected for this preview.
  * @returns {string[]} Shared Markdown paths that exist in this checkout.
  */
-function sharedPreviewDocs(): string[] {
-  return directMarkdownFiles(docsRoot);
+function sharedPreviewDocs(roots: string[]): string[] {
+  const artifactGeneratorRoot = normalizeAbsolutePath(join(docsRoot, artifactGeneratorProject));
+  const includesArtifactGenerator = roots.some(
+    (root) => normalizeAbsolutePath(root) === artifactGeneratorRoot,
+  );
+
+  return includesArtifactGenerator ? directMarkdownFiles(docsRoot) : [];
 }
 
 /**
@@ -319,6 +327,33 @@ function walkMarkdown(dir: string, files: string[] = []): string[] {
  */
 export function normalizeRepoPath(p: string): string {
   return relative(".", p).replaceAll("\\", "/");
+}
+
+/**
+ * Normalizes a path to an absolute forward-slash path for robust cache-root comparisons.
+ *
+ * @param p - Absolute or current-working-directory-relative path.
+ * @returns Absolute normalized path.
+ */
+function normalizeAbsolutePath(p: string): string {
+  return resolve(p).replaceAll("\\", "/");
+}
+
+/**
+ * Returns the path below a source cache root.
+ *
+ * @param p - Candidate source path.
+ * @param root - Source cache root.
+ * @returns Root-relative path, or null when the path is outside the root.
+ */
+function sourceRootRelativePath(p: string, root: string): string | null {
+  const absolutePath = normalizeAbsolutePath(p);
+  const absoluteRoot = normalizeAbsolutePath(root);
+
+  if (absolutePath === absoluteRoot) return "";
+  if (!absolutePath.startsWith(`${absoluteRoot}/`)) return null;
+
+  return absolutePath.slice(absoluteRoot.length + 1);
 }
 
 /**
@@ -440,7 +475,7 @@ function markdownDoc(sourcePath: string): MarkdownDoc {
 }
 
 /**
- * Finds Markdown docs under selected roots, keeping README first when present.
+ * Finds Markdown docs under selected roots.
  *
  * @param {string[]} roots - Directories to scan.
  * @returns {MarkdownDoc[]} Markdown docs for preview rendering.
@@ -454,7 +489,7 @@ export function findMarkdownDocs(roots: string[] = []): MarkdownDoc[] {
 
   const docsByInput = new Map<string, MarkdownDoc>();
 
-  for (const path of uniqueStrings([...sharedPreviewDocs(), ...scannedDocs])) {
+  for (const path of uniqueStrings([...sharedPreviewDocs(roots), ...scannedDocs])) {
     const doc = markdownDoc(path);
     if (!docsByInput.has(doc.input)) docsByInput.set(doc.input, doc);
   }
@@ -503,13 +538,28 @@ function isProjectGroup(group: string, docs: MarkdownDoc[]): boolean {
  * @param {MarkdownDoc[]} docs - Markdown docs inside the group.
  * @returns {number} Group priority.
  */
-function docGroupPriority(group: string, docs: MarkdownDoc[]): number {
-  const priority = priorityDocGroups.get(group);
-  if (priority !== undefined) return priority;
+function projectManifestOrder(): Map<string, number> {
+  if (!existsSync(projectManifestPath)) return new Map();
 
-  if (!isProjectGroup(group, docs)) return 10;
+  try {
+    const manifest = JSON.parse(readFileSync(projectManifestPath, "utf8")) as {
+      readonly projects?: Record<string, unknown>;
+    };
+    return new Map(Object.keys(manifest.projects ?? {}).map((project, index) => [project, index]));
+  } catch {
+    return new Map();
+  }
+}
 
-  return 100;
+function docGroupPriority(
+  group: string,
+  docs: MarkdownDoc[],
+  manifestOrder: ReadonlyMap<string, number>,
+): number {
+  if (!isProjectGroup(group, docs)) return priorityDocGroups.get(group) ?? 8000;
+
+  const projectPriority = manifestOrder.get(group);
+  return projectPriority === undefined ? 1000 : projectPriority;
 }
 
 /**
@@ -519,9 +569,12 @@ function docGroupPriority(group: string, docs: MarkdownDoc[]): number {
  * @returns {MarkdownDocGroup[]} Ordered docs groups.
  */
 export function orderedDocGroups(docs: MarkdownDoc[]): MarkdownDocGroup[] {
+  const manifestOrder = projectManifestOrder();
+
   return [...groupDocsByProject(docs).entries()].sort(([left, leftDocs], [right, rightDocs]) => {
     const priorityDifference =
-      docGroupPriority(left, leftDocs) - docGroupPriority(right, rightDocs);
+      docGroupPriority(left, leftDocs, manifestOrder) -
+      docGroupPriority(right, rightDocs, manifestOrder);
     if (priorityDifference !== 0) return priorityDifference;
 
     return left.localeCompare(right);
@@ -756,21 +809,20 @@ function physicalArtifactPath(p: string): string {
  */
 function logicalArtifactPath(p: string): string {
   const normalized = normalizeRepoPath(p);
+  const docsRelativePath = sourceRootRelativePath(p, docsRoot);
+  const diagramsRelativePath = sourceRootRelativePath(p, sourceInputDirs.diagrams);
+  const iconsRelativePath = sourceRootRelativePath(p, sourceInputDirs.icons);
 
-  if (normalized.startsWith(`${docsRoot}/`)) {
-    return normalizeRepoPath(join(logicalDocsRoot, normalized.slice(docsRoot.length + 1)));
+  if (docsRelativePath !== null) {
+    return normalizeRepoPath(join(logicalDocsRoot, docsRelativePath));
   }
 
-  if (normalized.startsWith(`${sourceInputDirs.diagrams}/`)) {
-    return normalizeRepoPath(
-      join(repoDirs.diagrams, normalized.slice(sourceInputDirs.diagrams.length + 1)),
-    );
+  if (diagramsRelativePath !== null) {
+    return normalizeRepoPath(join(repoDirs.diagrams, diagramsRelativePath));
   }
 
-  if (normalized.startsWith(`${sourceInputDirs.icons}/`)) {
-    return normalizeRepoPath(
-      join(repoDirs.icons, normalized.slice(sourceInputDirs.icons.length + 1)),
-    );
+  if (iconsRelativePath !== null) {
+    return normalizeRepoPath(join(repoDirs.icons, iconsRelativePath));
   }
 
   return normalized;
