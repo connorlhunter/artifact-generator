@@ -131,6 +131,58 @@ function syncOutlineHandleState(state: PreviewState): void {
 }
 
 /**
+ * Measures one CSS width variable even when the target drawer is collapsed.
+ */
+function cssVariableWidth(host: HTMLElement, variableName: string, fallback: number): number {
+  const probe = document.createElement("div");
+  probe.style.cssText = [
+    "position:absolute",
+    "visibility:hidden",
+    "pointer-events:none",
+    `width:var(${variableName})`,
+    "height:0",
+    "overflow:hidden",
+  ].join(";");
+  host.append(probe);
+  const width = probe.getBoundingClientRect().width;
+  probe.remove();
+  return width > 0.5 ? width : fallback;
+}
+
+/**
+ * Returns a reliable expanded width for the desktop outline drawer.
+ */
+function desktopOutlineExpandedWidth(state: PreviewState, fallback: number): number {
+  if (!state.docLayout || !state.pageOutline) return fallback;
+
+  const previousDragWidth = state.docLayout.style.getPropertyValue("--outline-drag-width");
+  const hasDraggedOutlineWidth = previousDragWidth.trim() !== "";
+  const wasLayoutCollapsed = state.docLayout.classList.contains("is-desktop-outline-collapsed");
+  const wasOutlineCollapsed = state.pageOutline.classList.contains("is-desktop-outline-collapsed");
+  const visibleWidth = state.pageOutline.getBoundingClientRect().width;
+  if (
+    !hasDraggedOutlineWidth &&
+    !wasLayoutCollapsed &&
+    !wasOutlineCollapsed &&
+    visibleWidth > 0.5
+  ) {
+    return visibleWidth;
+  }
+
+  state.docLayout.classList.remove("is-desktop-outline-collapsed");
+  state.docLayout.style.removeProperty("--outline-drag-width");
+  state.pageOutline.classList.remove("is-desktop-outline-collapsed");
+  const naturalWidth = state.pageOutline.getBoundingClientRect().width;
+  state.docLayout.classList.toggle("is-desktop-outline-collapsed", wasLayoutCollapsed);
+  state.pageOutline.classList.toggle("is-desktop-outline-collapsed", wasOutlineCollapsed);
+  if (previousDragWidth)
+    state.docLayout.style.setProperty("--outline-drag-width", previousDragWidth);
+
+  if (naturalWidth > 0.5) return naturalWidth;
+  return cssVariableWidth(state.docLayout, "--outline-column-width", fallback);
+}
+
+/**
  * Applies a freely dragged desktop navigation width with magnetic edge stops.
  */
 function setDesktopNavWidth(
@@ -139,6 +191,7 @@ function setDesktopNavWidth(
   expandedWidth: number,
   magnetLock: number | null = null,
   magnet = false,
+  updateActive = true,
 ): MagneticPosition {
   if (!state.docLayout || !state.docNav) return { magnetized: false, value: width };
 
@@ -157,7 +210,7 @@ function setDesktopNavWidth(
   if (collapsed || expanded) state.docLayout.style.removeProperty("--nav-drag-width");
   else state.docLayout.style.setProperty("--nav-drag-width", `${position.value}px`);
   syncNavHandleState(state);
-  requestActiveUpdate(state);
+  if (updateActive) requestActiveUpdate(state);
   return position;
 }
 
@@ -191,6 +244,7 @@ function wireDesktopNavResize(state: PreviewState): void {
     );
     state.docNav?.classList.remove("is-desktop-nav-magnetized");
     document.documentElement.classList.remove("is-resizing-desktop-nav");
+    requestActiveUpdate(state);
     magnetLock = null;
     if (state.navResizeHandle?.hasPointerCapture(activePointerId)) {
       state.navResizeHandle.releasePointerCapture(activePointerId);
@@ -231,6 +285,7 @@ function wireDesktopNavResize(state: PreviewState): void {
           expandedWidth,
           magnetLock,
           true,
+          false,
         );
         magnetLock = position.magnetized ? position.value : null;
       }
@@ -273,6 +328,7 @@ function setDesktopOutlineWidth(
   expandedWidth: number,
   magnetLock: number | null = null,
   magnet = false,
+  updateActive = true,
 ): MagneticPosition {
   if (!state.docLayout || !state.pageOutline) return { magnetized: false, value: width };
 
@@ -286,12 +342,13 @@ function setDesktopOutlineWidth(
   const expanded = Math.abs(position.value - expandedWidth) <= 0.5;
 
   state.docLayout.classList.toggle("is-desktop-outline-collapsed", collapsed);
+  state.docLayout.classList.toggle("is-desktop-outline-magnetized", position.magnetized);
   state.pageOutline.classList.toggle("is-desktop-outline-collapsed", collapsed);
   state.pageOutline.classList.toggle("is-desktop-outline-magnetized", position.magnetized);
   if (collapsed || expanded) state.docLayout.style.removeProperty("--outline-drag-width");
   else state.docLayout.style.setProperty("--outline-drag-width", `${position.value}px`);
   syncOutlineHandleState(state);
-  requestActiveUpdate(state);
+  if (updateActive) requestActiveUpdate(state);
   return position;
 }
 
@@ -299,7 +356,10 @@ function setDesktopOutlineWidth(
  * Clears desktop-only outline drawer sizing outside the wide desktop layout.
  */
 function resetDesktopOutlineWidth(state: PreviewState): void {
-  state.docLayout?.classList.remove("is-desktop-outline-collapsed");
+  state.docLayout?.classList.remove(
+    "is-desktop-outline-collapsed",
+    "is-desktop-outline-magnetized",
+  );
   state.docLayout?.style.removeProperty("--outline-drag-width");
   state.pageOutline?.classList.remove(
     "is-desktop-outline-collapsed",
@@ -314,7 +374,10 @@ function resetDesktopOutlineWidth(state: PreviewState): void {
 function wireDesktopOutlineResize(state: PreviewState): void {
   if (!state.docLayout || !state.pageOutline || !state.outlineResizeHandle) return;
 
-  let expandedWidth = state.pageOutline.getBoundingClientRect().width;
+  let expandedWidth = desktopOutlineExpandedWidth(
+    state,
+    state.pageOutline.getBoundingClientRect().width,
+  );
   let activePointerId = 0;
   let dragging = false;
   let magnetLock: number | null = null;
@@ -324,7 +387,7 @@ function wireDesktopOutlineResize(state: PreviewState): void {
   let suppressNextClick = false;
 
   const usableExpandedWidth = (): number => {
-    const measured = state.pageOutline?.getBoundingClientRect().width ?? expandedWidth;
+    const measured = desktopOutlineExpandedWidth(state, expandedWidth);
     if (measured > 0.5) expandedWidth = measured;
     return expandedWidth;
   };
@@ -342,8 +405,10 @@ function wireDesktopOutlineResize(state: PreviewState): void {
       desktopOutlineCollapsedStorageKey,
       state.docLayout?.classList.contains("is-desktop-outline-collapsed") ?? false,
     );
+    state.docLayout?.classList.remove("is-desktop-outline-magnetized");
     state.pageOutline?.classList.remove("is-desktop-outline-magnetized");
     document.documentElement.classList.remove("is-resizing-desktop-outline");
+    requestActiveUpdate(state);
     magnetLock = null;
     if (state.outlineResizeHandle?.hasPointerCapture(activePointerId)) {
       state.outlineResizeHandle.releasePointerCapture(activePointerId);
@@ -361,7 +426,8 @@ function wireDesktopOutlineResize(state: PreviewState): void {
       moved = false;
       activePointerId = event.pointerId;
       startX = event.clientX;
-      startWidth = state.pageOutline?.getBoundingClientRect().width ?? usableExpandedWidth();
+      expandedWidth = usableExpandedWidth();
+      startWidth = state.pageOutline?.getBoundingClientRect().width ?? 0;
       if (startWidth > expandedWidth) expandedWidth = startWidth;
       state.outlineResizeHandle?.setPointerCapture(activePointerId);
       document.documentElement.classList.add("is-resizing-desktop-outline");
@@ -381,9 +447,10 @@ function wireDesktopOutlineResize(state: PreviewState): void {
         const position = setDesktopOutlineWidth(
           state,
           startWidth + delta,
-          usableExpandedWidth(),
+          expandedWidth,
           magnetLock,
           true,
+          false,
         );
         magnetLock = position.magnetized ? position.value : null;
       }
