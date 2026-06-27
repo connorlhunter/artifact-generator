@@ -35,6 +35,11 @@ describe("assemble site artifacts", () => {
     writeFixtureFile(`${sourceInputDirs.manifests}/content-manifest.json`, "{}");
     writeFixtureFile(`${sourceInputDirs.profile}/profile.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.projects}/example.md`, "---\n{}\n---");
+    writeFixtureFile(`${sourceInputDirs.projects}/.local-metadata`, "junk");
+    writeFixtureFile(
+      `${sourceInputDirs.projects}/example/coverage/index.html`,
+      "<html>app coverage</html>",
+    );
     writeFixtureFile("coverage/index.html", "<html>coverage</html>");
     writeFixtureFile(`${sourceInputDirs.icons}/example/mark.svg`, "<svg>icon</svg>");
     writeFixtureFile(`${sourceInputDirs.resume}/example.pdf`, "%PDF-1.4");
@@ -56,6 +61,8 @@ describe("assemble site artifacts", () => {
     expect(existsSync("dist/site-artifacts/manifests/content-manifest.json")).toBe(true);
     expect(existsSync("dist/site-artifacts/profile/profile.md")).toBe(true);
     expect(existsSync("dist/site-artifacts/projects/example.md")).toBe(true);
+    expect(existsSync("dist/site-artifacts/projects/.local-metadata")).toBe(false);
+    expect(existsSync("dist/site-artifacts/projects/example/coverage/index.html")).toBe(false);
     expect(existsSync("dist/site-artifacts/coverage/index.html")).toBe(true);
     expect(existsSync("dist/site-artifacts/projects/artifact-generator/coverage/index.html")).toBe(
       true,

@@ -43,6 +43,12 @@ describe("publish site artifacts", () => {
         label: "Artifact bundle",
         prefix: "portfolio/artifacts",
         source: publishOutputs.siteArtifacts,
+        syncFilters: [
+          "--exclude",
+          "projects/*/coverage/*",
+          "--include",
+          "projects/artifact-generator/coverage/*",
+        ],
       },
       {
         bucket: "asset-bucket",
@@ -50,6 +56,7 @@ describe("publish site artifacts", () => {
         label: "Asset bundle",
         prefix: "portfolio/assets",
         source: publishOutputs.siteAssets,
+        syncFilters: [],
       },
     ]);
   });
@@ -70,6 +77,7 @@ describe("publish site artifacts", () => {
           label: "Artifact bundle",
           prefix: "portfolio/artifacts",
           source: publishOutputs.siteArtifacts,
+          syncFilters: [],
         },
         {
           bucket: "asset-bucket",
@@ -77,6 +85,7 @@ describe("publish site artifacts", () => {
           label: "Asset bundle",
           prefix: "",
           source: publishOutputs.siteAssets,
+          syncFilters: [],
         },
         {
           bucket: "other-bucket",
@@ -84,6 +93,7 @@ describe("publish site artifacts", () => {
           label: "Other bundle",
           prefix: "other",
           source: "dist/other",
+          syncFilters: [],
         },
       ]),
     ).toEqual([

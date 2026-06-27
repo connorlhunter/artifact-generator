@@ -16,6 +16,7 @@ interface PublishDestination {
   readonly label: string;
   readonly prefix: string;
   readonly source: string;
+  readonly syncFilters: string[];
 }
 
 interface PublishInvalidation {
@@ -93,6 +94,12 @@ export function publishDestinations(): PublishDestination[] {
       label: "Artifact bundle",
       prefix: envValue(process.env[artifactsPrefixEnv]),
       source: publishOutputs.siteArtifacts,
+      syncFilters: [
+        "--exclude",
+        "projects/*/coverage/*",
+        "--include",
+        "projects/artifact-generator/coverage/*",
+      ],
     },
     {
       bucket: requiredEnv(assetsBucketEnv),
@@ -100,6 +107,7 @@ export function publishDestinations(): PublishDestination[] {
       label: "Asset bundle",
       prefix: envValue(process.env[assetsPrefixEnv]),
       source: publishOutputs.siteAssets,
+      syncFilters: [],
     },
   ];
 }
@@ -136,9 +144,13 @@ export async function publishSiteArtifacts(): Promise<void> {
   for (const destination of destinations) {
     const target = s3Uri(destination.bucket, destination.prefix);
     logItem(`${destination.label}: ${destination.source} -> ${target}`, 1);
-    await runCommand("aws", ["s3", "sync", destination.source, target, "--delete"], {
-      subject: destination.label,
-    });
+    await runCommand(
+      "aws",
+      ["s3", "sync", destination.source, target, "--delete", ...destination.syncFilters],
+      {
+        subject: destination.label,
+      },
+    );
   }
 
   for (const invalidation of publishInvalidations(destinations)) {
