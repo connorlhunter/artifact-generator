@@ -7,7 +7,9 @@ const navMagnetReleaseDistance = 44;
 const desktopDragThreshold = 3;
 const mobileDragThreshold = 8;
 const desktopNavCollapsedStorageKey = "docs.preview.navigation.collapsed";
+const desktopOutlineCollapsedStorageKey = "docs.preview.outline.collapsed";
 const navControlsCollapsedStorageKey = "docs.preview.navigation.controls.collapsed";
+const desktopOutlineMediaQuery = "(min-width: 1161px)";
 
 interface MagneticPosition {
   magnetized: boolean;
@@ -19,6 +21,13 @@ interface MagneticPosition {
  */
 function isMobileNavLayout(): boolean {
   return window.matchMedia(mobileNavMediaQuery).matches;
+}
+
+/**
+ * Returns whether the right outline is visible as a desktop sidebar.
+ */
+function isDesktopOutlineLayout(): boolean {
+  return window.matchMedia(desktopOutlineMediaQuery).matches;
 }
 
 /**
@@ -106,6 +115,19 @@ function syncNavHandleState(state: PreviewState): void {
   state.navResizeHandle.setAttribute("aria-label", label);
   state.navResizeHandle.title = label;
   state.navResizeHandle.setAttribute("aria-expanded", String(!collapsed));
+}
+
+/**
+ * Keeps the right outline handle label accurate for the current desktop state.
+ */
+function syncOutlineHandleState(state: PreviewState): void {
+  if (!state.outlineResizeHandle) return;
+
+  const collapsed = state.docLayout?.classList.contains("is-desktop-outline-collapsed") ?? false;
+  const label = collapsed ? "Expand on this page panel" : "Collapse on this page panel";
+  state.outlineResizeHandle.setAttribute("aria-label", label);
+  state.outlineResizeHandle.title = label;
+  state.outlineResizeHandle.setAttribute("aria-expanded", String(!collapsed));
 }
 
 /**
@@ -240,6 +262,171 @@ function wireDesktopNavResize(state: PreviewState): void {
     passive: true,
     signal: state.signal,
   });
+}
+
+/**
+ * Applies a freely dragged desktop outline width with magnetic edge stops.
+ */
+function setDesktopOutlineWidth(
+  state: PreviewState,
+  width: number,
+  expandedWidth: number,
+  magnetLock: number | null = null,
+  magnet = false,
+): MagneticPosition {
+  if (!state.docLayout || !state.pageOutline) return { magnetized: false, value: width };
+
+  const position = magnet
+    ? magneticPosition(width, [0, expandedWidth], magnetLock)
+    : {
+        magnetized: false,
+        value: clampPosition(width, 0, expandedWidth),
+      };
+  const collapsed = position.value <= 0.5;
+  const expanded = Math.abs(position.value - expandedWidth) <= 0.5;
+
+  state.docLayout.classList.toggle("is-desktop-outline-collapsed", collapsed);
+  state.pageOutline.classList.toggle("is-desktop-outline-collapsed", collapsed);
+  state.pageOutline.classList.toggle("is-desktop-outline-magnetized", position.magnetized);
+  if (collapsed || expanded) state.docLayout.style.removeProperty("--outline-drag-width");
+  else state.docLayout.style.setProperty("--outline-drag-width", `${position.value}px`);
+  syncOutlineHandleState(state);
+  requestActiveUpdate(state);
+  return position;
+}
+
+/**
+ * Clears desktop-only outline drawer sizing outside the wide desktop layout.
+ */
+function resetDesktopOutlineWidth(state: PreviewState): void {
+  state.docLayout?.classList.remove("is-desktop-outline-collapsed");
+  state.docLayout?.style.removeProperty("--outline-drag-width");
+  state.pageOutline?.classList.remove(
+    "is-desktop-outline-collapsed",
+    "is-desktop-outline-magnetized",
+  );
+  syncOutlineHandleState(state);
+}
+
+/**
+ * Wires the floating desktop right outline handle for clicks and horizontal dragging.
+ */
+function wireDesktopOutlineResize(state: PreviewState): void {
+  if (!state.docLayout || !state.pageOutline || !state.outlineResizeHandle) return;
+
+  let expandedWidth = state.pageOutline.getBoundingClientRect().width;
+  let activePointerId = 0;
+  let dragging = false;
+  let magnetLock: number | null = null;
+  let moved = false;
+  let startWidth = 0;
+  let startX = 0;
+  let suppressNextClick = false;
+
+  const usableExpandedWidth = (): number => {
+    const measured = state.pageOutline?.getBoundingClientRect().width ?? expandedWidth;
+    if (measured > 0.5) expandedWidth = measured;
+    return expandedWidth;
+  };
+
+  if (isDesktopOutlineLayout() && savedCollapsedState(desktopOutlineCollapsedStorageKey)) {
+    setDesktopOutlineWidth(state, 0, usableExpandedWidth());
+  }
+
+  const stopDragging = (event: PointerEvent): void => {
+    if (!dragging || event.pointerId !== activePointerId) return;
+
+    dragging = false;
+    suppressNextClick = moved;
+    saveCollapsedState(
+      desktopOutlineCollapsedStorageKey,
+      state.docLayout?.classList.contains("is-desktop-outline-collapsed") ?? false,
+    );
+    state.pageOutline?.classList.remove("is-desktop-outline-magnetized");
+    document.documentElement.classList.remove("is-resizing-desktop-outline");
+    magnetLock = null;
+    if (state.outlineResizeHandle?.hasPointerCapture(activePointerId)) {
+      state.outlineResizeHandle.releasePointerCapture(activePointerId);
+    }
+    activePointerId = 0;
+    event.preventDefault();
+  };
+
+  state.outlineResizeHandle.addEventListener(
+    "pointerdown",
+    (event) => {
+      if (!isDesktopOutlineLayout()) return;
+
+      dragging = true;
+      moved = false;
+      activePointerId = event.pointerId;
+      startX = event.clientX;
+      startWidth = state.pageOutline?.getBoundingClientRect().width ?? usableExpandedWidth();
+      if (startWidth > expandedWidth) expandedWidth = startWidth;
+      state.outlineResizeHandle?.setPointerCapture(activePointerId);
+      document.documentElement.classList.add("is-resizing-desktop-outline");
+      event.preventDefault();
+    },
+    { signal: state.signal },
+  );
+
+  window.addEventListener(
+    "pointermove",
+    (event) => {
+      if (!dragging || event.pointerId !== activePointerId) return;
+
+      const delta = startX - event.clientX;
+      moved ||= Math.abs(delta) > desktopDragThreshold;
+      if (moved) {
+        const position = setDesktopOutlineWidth(
+          state,
+          startWidth + delta,
+          usableExpandedWidth(),
+          magnetLock,
+          true,
+        );
+        magnetLock = position.magnetized ? position.value : null;
+      }
+      event.preventDefault();
+    },
+    { signal: state.signal },
+  );
+
+  window.addEventListener("pointerup", stopDragging, { signal: state.signal });
+  window.addEventListener("pointercancel", stopDragging, { signal: state.signal });
+
+  state.outlineResizeHandle.addEventListener(
+    "click",
+    () => {
+      if (!isDesktopOutlineLayout()) return;
+      if (suppressNextClick) {
+        suppressNextClick = false;
+        return;
+      }
+
+      const collapsed =
+        state.docLayout?.classList.contains("is-desktop-outline-collapsed") ?? false;
+      setDesktopOutlineWidth(state, collapsed ? usableExpandedWidth() : 0, usableExpandedWidth());
+      saveCollapsedState(desktopOutlineCollapsedStorageKey, !collapsed);
+    },
+    { signal: state.signal },
+  );
+
+  window.addEventListener(
+    "resize",
+    () => {
+      if (!isDesktopOutlineLayout()) resetDesktopOutlineWidth(state);
+      else if (savedCollapsedState(desktopOutlineCollapsedStorageKey)) {
+        setDesktopOutlineWidth(state, 0, usableExpandedWidth());
+      } else {
+        syncOutlineHandleState(state);
+      }
+    },
+    {
+      passive: true,
+      signal: state.signal,
+    },
+  );
 }
 
 /**

@@ -87,9 +87,11 @@ describe("render docs preview", () => {
     expect(html).toContain('document.querySelector("[data-doc-nav]")');
     expect(html).toContain('document.querySelector("[data-doc-main]")');
     expect(html).toContain('document.querySelector("[data-page-outline]")');
+    expect(html).toContain('document.querySelector("[data-outline-resize-handle]")');
     expect(html).toContain(
       'data-nav-resize-handle aria-label="Resize navigation panel" aria-expanded="true"',
     );
+    expect(html).toContain('data-outline-resize-handle aria-label="Collapse on this page panel"');
     expect(html).toContain("data-doc-layout");
     expect(html).toContain("data-nav-controls-content");
     expect(html).toContain("data-nav-controls-handle");
@@ -99,11 +101,14 @@ describe("render docs preview", () => {
     expect(html).toContain("mobileNavSnapHeights");
     expect(html).toContain("nextMobileNavSnapHeight");
     expect(html).toContain("wireDesktopNavResize");
+    expect(html).toContain("wireDesktopOutlineResize");
     expect(html).toContain("docs.preview.navigation.collapsed");
+    expect(html).toContain("docs.preview.outline.collapsed");
     expect(html).toContain("wireMobileNavResize");
     expect(html).toContain("clampMobileNavHeight");
     expect(html).toContain("mobileNavCollapsedHeight");
     expect(html).toContain("is-nav-collapsed");
+    expect(html).toContain("is-desktop-outline-collapsed");
     expect(html).toContain("wireSchemeToggle");
     expect(html).toContain('data-scheme="atlas"');
     expect(html).toContain("connorhunter.theme.scheme");

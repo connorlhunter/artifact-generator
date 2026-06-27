@@ -47,11 +47,15 @@ describe("docs preview assets", () => {
       ".scheme-toggle",
       ".project-icon",
       ".nav-resize-handle",
+      ".outline-resize-handle",
       ".is-nav-magnetized",
       ".is-desktop-nav-magnetized",
+      ".is-desktop-outline-magnetized",
       ".is-nav-controls-magnetized",
       ".layout.is-desktop-nav-collapsed",
+      ".layout.is-desktop-outline-collapsed",
       "--nav-drag-width",
+      "--outline-drag-width",
       "grid-template-columns: 0 minmax(0, 1fr)",
       "height: 100dvh",
       "-webkit-overflow-scrolling: touch",
@@ -70,6 +74,7 @@ describe("docs preview assets", () => {
     );
     expect(docsPreviewStyles).toContain(".nav-controls-handle {\n    display: none;");
     expect(docsPreviewStyles).toContain(".is-resizing-nav .nav-resize-handle");
+    expect(docsPreviewStyles).toContain(".is-resizing-desktop-outline .outline-resize-handle");
     expect(docsPreviewStyles).toContain("background: transparent");
     expect(docsPreviewStyles).not.toContain("transition: all");
   });
@@ -123,6 +128,7 @@ describe("docs preview assets", () => {
     expect(script).toContain("wireMobileNavResize");
     expect(script).toContain("wireNavControlsResize");
     expect(script).toContain("wireDesktopNavResize");
+    expect(script).toContain("wireDesktopOutlineResize");
     expect(script).toContain("magneticPosition");
     expect(script).toContain("navMagnetDistance = 28");
     expect(script).toContain("navMagnetReleaseDistance = 44");
@@ -131,7 +137,9 @@ describe("docs preview assets", () => {
     expect(script).toContain("nextMobileNavSnapHeight");
     expect(script).toContain("docs.preview.navigation.controls.collapsed");
     expect(script).toContain("docs.preview.navigation.collapsed");
+    expect(script).toContain("docs.preview.outline.collapsed");
     expect(script).toContain("is-desktop-nav-collapsed");
+    expect(script).toContain("is-desktop-outline-collapsed");
     expect(script).toContain("wireDocNavigation");
     expect(script).toContain("wireOutlineNavigation");
     expect(script).toContain("previewScrollBehavior");
@@ -170,6 +178,7 @@ describe("docs preview assets", () => {
     expect(script).toContain("wireSourceButtons");
     expect(script).toContain("wireSchemeToggle");
     expect(script).toContain("wireMobileNavResize");
+    expect(script).toContain("wireDesktopOutlineResize");
     expect(script).toContain("startDocsPreviewClient");
   });
 
