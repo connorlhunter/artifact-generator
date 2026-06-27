@@ -314,11 +314,12 @@ body {
 
 .layout {
   --nav-column-width: clamp(16.25rem, 22vw, 20rem);
+  --outline-column-width: clamp(13.75rem, 17.5vw, 17.5rem);
 
   display: grid;
   grid-template-columns:
     var(--nav-drag-width, var(--nav-column-width)) minmax(0, 1fr)
-    minmax(13.75rem, 17.5rem);
+    var(--outline-drag-width, var(--outline-column-width));
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -350,7 +351,7 @@ nav {
 
 @media (min-width: 861px) {
   .layout.is-desktop-nav-collapsed {
-    grid-template-columns: 0 minmax(0, 1fr) minmax(13.75rem, 17.5rem);
+    --nav-drag-width: 0;
   }
 
   nav.is-desktop-nav-collapsed {
@@ -526,6 +527,12 @@ nav {
 
 .is-resizing-desktop-nav,
 .is-resizing-desktop-nav body {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+.is-resizing-desktop-outline,
+.is-resizing-desktop-outline body {
   cursor: ew-resize;
   user-select: none;
 }
@@ -1133,6 +1140,95 @@ main {
   -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 2.5rem), transparent 100%);
 }
 
+.outline-resize-handle {
+  display: none;
+}
+
+@media (min-width: 1161px) {
+  .layout.is-desktop-outline-collapsed {
+    --outline-drag-width: 0;
+  }
+
+  .page-outline.is-desktop-outline-collapsed {
+    overflow: visible;
+    border-left: 0;
+    padding: 0;
+    contain: none;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .page-outline.is-desktop-outline-collapsed > :not(.outline-resize-handle) {
+    display: none;
+  }
+
+  .outline-resize-handle {
+    position: fixed;
+    top: 0;
+    right: max(0px, calc(var(--outline-drag-width, var(--outline-column-width)) - 0.875rem));
+    bottom: 0;
+    z-index: 8;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 100dvh;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: ew-resize;
+    opacity: 0;
+    touch-action: none;
+    transition:
+      opacity var(--motion-fast),
+      transform var(--motion-fast);
+  }
+
+  .outline-resize-handle span {
+    width: 0.3rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 72%, var(--accent));
+    box-shadow:
+      0 0 0 0.25rem color-mix(in srgb, var(--panel) 86%, transparent),
+      -1px 0 0 rgb(255 255 255 / 18%);
+    transition:
+      background-color var(--motion-fast),
+      box-shadow var(--motion-fast);
+  }
+
+  .page-outline.is-desktop-outline-collapsed .outline-resize-handle {
+    right: 0;
+    opacity: 1;
+  }
+
+  .page-outline:hover .outline-resize-handle,
+  .outline-resize-handle:focus-visible,
+  .is-resizing-desktop-outline .outline-resize-handle,
+  .page-outline.is-desktop-outline-magnetized .outline-resize-handle {
+    opacity: 1;
+  }
+
+  .outline-resize-handle:hover,
+  .outline-resize-handle:focus-visible,
+  .is-resizing-desktop-outline .outline-resize-handle {
+    transform: translate3d(-1px, 0, 0);
+  }
+
+  .page-outline.is-desktop-outline-magnetized .outline-resize-handle span {
+    background: var(--accent);
+    box-shadow:
+      0 0 0 0.3rem color-mix(in srgb, var(--panel) 84%, var(--accent-soft)),
+      0 0 0 0.45rem color-mix(in srgb, var(--accent) 18%, transparent),
+      var(--shadow-sm);
+  }
+
+  .outline-resize-handle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -0.35rem;
+  }
+}
+
 .outline-panel {
   max-width: 16.25rem;
 }
@@ -1215,6 +1311,8 @@ main {
 .nav-controls-handle:focus-visible,
 .nav-resize-handle:hover,
 .nav-resize-handle:focus-visible,
+.outline-resize-handle:hover,
+.outline-resize-handle:focus-visible,
 .scheme-toggle:hover,
 .scheme-toggle:focus-visible,
 .github-link:hover,
@@ -1405,6 +1503,7 @@ main {
   .nav-group a,
   .nav-resize-handle,
   .nav-controls-handle,
+  .outline-resize-handle,
   .scheme-toggle,
   .github-link,
   .doc-source summary,
@@ -1417,6 +1516,7 @@ main {
   .nav-group a:hover,
   .nav-resize-handle:hover,
   .nav-controls-handle:hover,
+  .outline-resize-handle:hover,
   .scheme-toggle:hover,
   .github-link:hover,
   .doc-source summary:hover,

@@ -97,11 +97,14 @@ ${themeBootstrapScript()}
       ${page.articlesHtml}
     </main>
     <aside class="page-outline" aria-label="On this page" data-page-outline>
-      <div class="outline-panel">
+      <div class="outline-panel" id="page-outline-panel">
         <p class="outline-kicker">On this page</p>
         <h2 class="outline-title" data-outline-title>Current doc</h2>
         <div class="outline-links" data-outline-links></div>
       </div>
+      <button class="outline-resize-handle" type="button" data-outline-resize-handle aria-label="Collapse on this page panel" aria-controls="page-outline-panel" aria-expanded="true" title="Collapse on this page panel">
+        <span aria-hidden="true"></span>
+      </button>
     </aside>
   </div>
   ${page.clientScript}

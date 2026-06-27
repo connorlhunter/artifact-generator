@@ -24,6 +24,7 @@ interface PreviewState {
   navSections: HTMLElement[];
   pageOutline: HTMLElement | null;
   outlineLinks: HTMLElement | null;
+  outlineResizeHandle: HTMLButtonElement | null;
   outlineTitle: HTMLElement | null;
   mobileNavMagnetLockHeight: number | null;
   pendingFrame: number;

@@ -30,6 +30,7 @@ function createState(): PreviewState {
     navSections: Array.from(document.querySelectorAll<HTMLElement>("[data-nav-section]")),
     pageOutline: document.querySelector<HTMLElement>("[data-page-outline]"),
     outlineLinks: document.querySelector<HTMLElement>("[data-outline-links]"),
+    outlineResizeHandle: document.querySelector<HTMLButtonElement>("[data-outline-resize-handle]"),
     outlineTitle: document.querySelector<HTMLElement>("[data-outline-title]"),
     mobileNavMagnetLockHeight: null,
     pendingFrame: 0,
