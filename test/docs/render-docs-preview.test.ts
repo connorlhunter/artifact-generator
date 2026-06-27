@@ -78,6 +78,7 @@ describe("render docs preview", () => {
     expect(html).toContain("<h1>Docs Fixture</h1>");
     expect(html).not.toContain("Architecture Docs");
     expect(html).toContain("data-doc-search-input");
+    expect(html).toContain('class="nav-panel"');
     expect(html).toContain('class="page-outline"');
     expect(html).toContain("data-outline-links");
     expect(html).toContain("data-doc-link");

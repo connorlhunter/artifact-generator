@@ -46,6 +46,7 @@ describe("docs preview assets", () => {
       ".github-link",
       ".scheme-toggle",
       ".project-icon",
+      ".nav-panel",
       ".nav-resize-handle",
       ".outline-resize-handle",
       ".is-nav-magnetized",
@@ -56,6 +57,17 @@ describe("docs preview assets", () => {
       ".layout.is-desktop-outline-collapsed",
       "--nav-drag-width",
       "--outline-drag-width",
+      "--nav-inline-padding: 2.25rem",
+      "--drawer-handle-thickness: 0.375rem",
+      "--drawer-handle-side-thickness: 0.5rem",
+      "--outline-inline-padding: 2.25rem",
+      "width: var(--drawer-handle-side-thickness)",
+      "height: var(--drawer-handle-thickness)",
+      "opacity: 0",
+      "overflow-x: hidden",
+      "width: calc(var(--nav-column-width) - var(--nav-inline-padding))",
+      "margin-left: calc(var(--nav-drag-width, var(--nav-column-width)) - var(--nav-column-width))",
+      "width: calc(var(--outline-column-width) - var(--outline-inline-padding))",
       "grid-template-columns: 0 minmax(0, 1fr)",
       "height: 100dvh",
       "-webkit-overflow-scrolling: touch",
@@ -73,8 +85,13 @@ describe("docs preview assets", () => {
       ".nav-controls.is-nav-controls-collapsed .nav-controls-content {\n    visibility: visible;",
     );
     expect(docsPreviewStyles).toContain(".nav-controls-handle {\n    display: none;");
+    expect(docsPreviewStyles).toContain("nav.is-desktop-nav-collapsed > :not(.nav-resize-handle)");
     expect(docsPreviewStyles).toContain(".is-resizing-nav .nav-resize-handle");
     expect(docsPreviewStyles).toContain(".is-resizing-desktop-outline .outline-resize-handle");
+    expect(docsPreviewStyles).toContain("opacity var(--motion-fast)");
+    expect(docsPreviewStyles).toContain("nav:hover .nav-resize-handle");
+    expect(docsPreviewStyles).toContain(".nav-controls:hover .nav-controls-handle");
+    expect(docsPreviewStyles).toContain(".page-outline:hover + .outline-resize-handle");
     expect(docsPreviewStyles).toContain("background: transparent");
     expect(docsPreviewStyles).not.toContain("transition: all");
   });
@@ -129,6 +146,12 @@ describe("docs preview assets", () => {
     expect(script).toContain("wireNavControlsResize");
     expect(script).toContain("wireDesktopNavResize");
     expect(script).toContain("wireDesktopOutlineResize");
+    expect(script).toContain("desktopOutlineExpandedWidth");
+    expect(script).toContain("cssVariableWidth");
+    expect(script).toContain("hasDraggedOutlineWidth");
+    expect(script).toContain("expandedWidth = usableExpandedWidth();");
+    expect(script).toContain("updateActive = true");
+    expect(script).toContain("if (updateActive)");
     expect(script).toContain("magneticPosition");
     expect(script).toContain("navMagnetDistance = 28");
     expect(script).toContain("navMagnetReleaseDistance = 44");
