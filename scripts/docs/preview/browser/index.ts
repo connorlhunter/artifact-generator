@@ -7,6 +7,8 @@ function startDocsPreviewClient(): void {
   installCleanup(state);
   wireDocNavigation(state);
   wireOutlineNavigation(state);
+  wireNavControlsResize(state);
+  wireDesktopNavResize(state);
   wireMobileNavResize(state);
   wireSchemeToggle(state);
   wireSourceButtons(state);
