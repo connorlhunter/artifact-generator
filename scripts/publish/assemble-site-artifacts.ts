@@ -23,6 +23,8 @@ export const publishOutputs = {
 } as const;
 
 interface ProjectArtifactManifestEntry {
+  coveragePath?: string;
+  coveragePdfPath?: string;
   docsPath: string;
   docsPdfPath?: string;
 }
@@ -177,13 +179,19 @@ export function copyDocsPreview(project = defaultDocsProject): void {
  *
  * @param manifestPath - Published project artifact manifest to update.
  */
-export function addDocsPdfPaths(
+export function addGeneratedPdfPaths(
   manifestPath = join(publishOutputs.siteArtifacts, "manifests", "project-artifacts.json"),
 ): void {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifest;
 
   for (const project of Object.values(manifest.projects)) {
     project.docsPdfPath = project.docsPath.replace(/\.html$/u, ".pdf");
+  }
+
+  const artifactGenerator = manifest.projects[defaultDocsProject];
+
+  if (artifactGenerator?.coveragePath && isFile(artifactPaths.coverageReportPdf)) {
+    artifactGenerator.coveragePdfPath = artifactGenerator.coveragePath.replace(/\.html$/u, ".pdf");
   }
 
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -281,7 +289,7 @@ export function copySharedPublishInputs(): void {
     copyPath(plan);
   }
 
-  addDocsPdfPaths();
+  addGeneratedPdfPaths();
 }
 
 /**

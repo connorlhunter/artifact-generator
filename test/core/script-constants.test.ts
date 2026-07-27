@@ -25,6 +25,7 @@ describe("script constants", () => {
     expect(artifactPaths.docsPreview).toBe("dist/docs-preview/index.html");
     expect(artifactPaths.docsPreviewPdf).toBe("dist/docs-preview/index.pdf");
     expect(artifactPaths.coverageReport).toBe("coverage/index.html");
+    expect(artifactPaths.coverageReportPdf).toBe("coverage/index.pdf");
     expect(sharedDiagramInputs).toEqual([`${sourceInputDirs.diagrams}/diagram-style-key.mmd`]);
   });
 

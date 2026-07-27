@@ -1,7 +1,8 @@
 import { readFileSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
+import { renderCoveragePdf } from "../coverage/render-coverage-pdf.ts";
 import { renderDiagrams } from "../diagrams/render-diagrams.ts";
-import { renderDocsPdf } from "../docs/render-docs-pdf.ts";
+import { publicDocsUrl, renderDocsPdf } from "../docs/render-docs-pdf.ts";
 import { renderDocsPreview } from "../docs/render-docs-preview.ts";
 import { artifactPaths, sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
@@ -53,13 +54,14 @@ export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void>
   cleanPublishOutputs();
   logHeading("Building project artifact bundle", { count: projectSlugs.length });
 
+  await renderCoveragePdf();
   await renderDiagrams(projectSlugs);
 
   for (const slug of projectSlugs) {
     logItem(`Rendering docs preview for ${slug}`, 1);
     rmSync(dirname(artifactPaths.docsPreview), { force: true, recursive: true });
     await renderDocsPreview([slug, ...docsArgs]);
-    await renderDocsPdf();
+    await renderDocsPdf(undefined, undefined, publicDocsUrl(slug));
     copyDocsPreview(slug);
   }
 

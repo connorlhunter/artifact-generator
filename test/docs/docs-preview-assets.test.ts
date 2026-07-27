@@ -75,6 +75,9 @@ describe("docs preview assets", () => {
       "@media (prefers-reduced-motion: reduce)",
       "@media print",
       "break-before: page",
+      "background: #f4f6f8",
+      "color: #17202a",
+      "background: #eef1f4",
     ].forEach((styleHook) => {
       expect(docsPreviewStyles).toContain(styleHook);
     });

@@ -46,6 +46,7 @@ describe("assemble site artifacts", () => {
       "<html>app coverage</html>",
     );
     writeFixtureFile("coverage/index.html", "<html>coverage</html>");
+    writeFixtureFile("coverage/index.pdf", "%PDF-1.4");
     writeFixtureFile(`${sourceInputDirs.icons}/example/mark.svg`, "<svg>icon</svg>");
     writeFixtureFile(`${sourceInputDirs.resume}/example.pdf`, "%PDF-1.4");
 
@@ -81,7 +82,11 @@ describe("assemble site artifacts", () => {
     expect(existsSync("dist/site-artifacts/projects/.local-metadata")).toBe(false);
     expect(existsSync("dist/site-artifacts/projects/example/coverage/index.html")).toBe(false);
     expect(existsSync("dist/site-artifacts/coverage/index.html")).toBe(true);
+    expect(existsSync("dist/site-artifacts/coverage/index.pdf")).toBe(true);
     expect(existsSync("dist/site-artifacts/projects/artifact-generator/coverage/index.html")).toBe(
+      true,
+    );
+    expect(existsSync("dist/site-artifacts/projects/artifact-generator/coverage/index.pdf")).toBe(
       true,
     );
     expect(existsSync("dist/site-assets/icons/example/mark.svg")).toBe(true);
