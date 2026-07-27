@@ -1,1 +1,8 @@
-{}
+{
+  "brace-expansion": {
+    "reason": "Allow the patched expansion DoS fix before the normal release-age gate; remove this after it ages past one week."
+  },
+  "postcss": {
+    "reason": "Allow the patched source-map path traversal fix before the normal release-age gate; remove this after it ages past one week."
+  }
+}

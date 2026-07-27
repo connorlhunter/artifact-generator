@@ -1,6 +1,7 @@
 import { readFileSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { renderDiagrams } from "../diagrams/render-diagrams.ts";
+import { renderDocsPdf } from "../docs/render-docs-pdf.ts";
 import { renderDocsPreview } from "../docs/render-docs-preview.ts";
 import { artifactPaths, sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
@@ -58,6 +59,7 @@ export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void>
     logItem(`Rendering docs preview for ${slug}`, 1);
     rmSync(dirname(artifactPaths.docsPreview), { force: true, recursive: true });
     await renderDocsPreview([slug, ...docsArgs]);
+    await renderDocsPdf();
     copyDocsPreview(slug);
   }
 
