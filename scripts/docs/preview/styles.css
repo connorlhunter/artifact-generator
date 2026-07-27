@@ -1603,7 +1603,22 @@ main {
   }
 
   pre {
+    border: 1px solid #d8dee8;
+    border-radius: 0.25rem;
+    background: #f4f6f8;
+    box-shadow: none;
+    color: #17202a;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+
+  code {
+    background: #eef1f4;
+    color: #17202a;
+  }
+
+  pre code {
+    background: transparent;
+    color: inherit;
   }
 }

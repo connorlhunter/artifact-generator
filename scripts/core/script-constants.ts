@@ -59,6 +59,7 @@ export const artifactPaths = {
   coverageDir: repoDirs.coverage,
   coverageLcov: join(repoDirs.coverage, "lcov.info"),
   coverageReport: join(repoDirs.coverage, "index.html"),
+  coverageReportPdf: join(repoDirs.coverage, "index.pdf"),
   docsPreview: join(repoDirs.dist, "docs-preview", "index.html"),
   docsPreviewPdf: join(repoDirs.dist, "docs-preview", "index.pdf"),
 } as const;

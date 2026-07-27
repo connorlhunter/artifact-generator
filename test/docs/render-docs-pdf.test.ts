@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { renderDocsPdf } from "../../scripts/docs/render-docs-pdf.ts";
+import { publicDocsUrl, renderDocsPdf } from "../../scripts/docs/render-docs-pdf.ts";
 
 describe("renderDocsPdf", () => {
   let tempDir = "";
@@ -21,5 +21,12 @@ describe("renderDocsPdf", () => {
     await expect(renderDocsPdf(input, output)).resolves.toBe(output);
     expect(existsSync(output)).toBe(true);
     expect(readFileSync(output).subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  test("builds public docs URLs without a trailing origin slash", () => {
+    expect(publicDocsUrl("connor-hunter", "https://artifacts.example.com/")).toBe(
+      "https://artifacts.example.com/docs/connor-hunter/index.html",
+    );
+    expect(publicDocsUrl("connor-hunter", "")).toBeUndefined();
   });
 });
