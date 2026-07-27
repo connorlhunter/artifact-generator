@@ -1,4 +1,12 @@
-import { cpSync, existsSync, readdirSync, rmSync, statSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 import { ensureDirectory } from "../core/bun-native-fs.ts";
@@ -13,6 +21,15 @@ export const publishOutputs = {
   siteArtifacts: join(repoDirs.dist, "site-artifacts"),
   siteAssets: join(repoDirs.dist, "site-assets"),
 } as const;
+
+interface ProjectArtifactManifestEntry {
+  docsPath: string;
+  docsPdfPath?: string;
+}
+
+interface ProjectArtifactManifest {
+  projects: Record<string, ProjectArtifactManifestEntry>;
+}
 
 const defaultDocsProject = "artifact-generator";
 
@@ -156,6 +173,23 @@ export function copyDocsPreview(project = defaultDocsProject): void {
 }
 
 /**
+ * Adds generated PDF paths to the manifest copied into the public artifact bundle.
+ *
+ * @param manifestPath - Published project artifact manifest to update.
+ */
+export function addDocsPdfPaths(
+  manifestPath = join(publishOutputs.siteArtifacts, "manifests", "project-artifacts.json"),
+): void {
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifest;
+
+  for (const project of Object.values(manifest.projects)) {
+    project.docsPdfPath = project.docsPath.replace(/\.html$/u, ".pdf");
+  }
+
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+/**
  * Copies project markdown/content without republishing project-owned coverage.
  *
  * @returns Number of copied project content files.
@@ -246,6 +280,8 @@ export function copySharedPublishInputs(): void {
   for (const plan of plans) {
     copyPath(plan);
   }
+
+  addDocsPdfPaths();
 }
 
 /**

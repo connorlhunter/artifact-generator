@@ -26,6 +26,7 @@ describe("assemble site artifacts", () => {
 
   test("copies generated docs, diagrams, content, icons, and resume assets", () => {
     writeFixtureFile("dist/docs-preview/index.html", "<html>docs</html>");
+    writeFixtureFile("dist/docs-preview/index.pdf", "%PDF-1.4");
     writeFixtureFile(`${sourceInputDirs.diagrams}/diagram-style-key.svg`, "<svg>key</svg>");
     writeFixtureFile(
       `${sourceInputDirs.diagrams}/example/example-overview.svg`,
@@ -33,6 +34,10 @@ describe("assemble site artifacts", () => {
     );
     writeFixtureFile(`${sourceInputDirs.diagrams}/example/example-overview.mmd`, "flowchart TD");
     writeFixtureFile(`${sourceInputDirs.manifests}/content-manifest.json`, "{}");
+    writeFixtureFile(
+      `${sourceInputDirs.manifests}/project-artifacts.json`,
+      JSON.stringify({ projects: { example: { docsPath: "docs/example/index.html" } } }),
+    );
     writeFixtureFile(`${sourceInputDirs.profile}/profile.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.projects}/example.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.projects}/.local-metadata`, "junk");
@@ -54,6 +59,18 @@ describe("assemble site artifacts", () => {
     expect(
       readFileSync("dist/site-artifacts/docs/artifact-generator/index.html", "utf8"),
     ).toContain("docs");
+    expect(readFileSync("dist/site-artifacts/docs/artifact-generator/index.pdf", "utf8")).toContain(
+      "%PDF-1.4",
+    );
+    expect(
+      JSON.parse(readFileSync("dist/site-artifacts/manifests/project-artifacts.json", "utf8")) as {
+        projects: { example: { docsPdfPath: string } };
+      },
+    ).toEqual({
+      projects: {
+        example: { docsPath: "docs/example/index.html", docsPdfPath: "docs/example/index.pdf" },
+      },
+    });
     expect(
       readFileSync("dist/site-artifacts/diagrams/example/example-overview.svg", "utf8"),
     ).toContain("example");
@@ -84,6 +101,10 @@ describe("assemble site artifacts", () => {
   test("can place a rendered docs preview under a selected project slug", () => {
     writeFixtureFile("dist/docs-preview/index.html", "<html>docs</html>");
     writeFixtureFile(`${sourceInputDirs.manifests}/content-manifest.json`, "{}");
+    writeFixtureFile(
+      `${sourceInputDirs.manifests}/project-artifacts.json`,
+      JSON.stringify({ projects: { example: { docsPath: "docs/example/index.html" } } }),
+    );
     writeFixtureFile(`${sourceInputDirs.profile}/profile.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.projects}/example.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.icons}/example/mark.svg`, "<svg>icon</svg>");

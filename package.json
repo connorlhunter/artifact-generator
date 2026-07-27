@@ -24,6 +24,7 @@
     "test:coverage": "bun run build && bun scripts/coverage/clean-coverage.ts && bun test --isolate --coverage && bun scripts/coverage/render-coverage-report.ts",
     "coverage:open": "bun run test:coverage && bun dist/scripts/coverage/open-coverage-report.js",
     "docs:render": "bun run build && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun dist/scripts/docs/render-docs-preview.js",
+    "docs:render:pdf": "bun run build && bun dist/scripts/docs/render-docs-pdf.js",
     "docs:open": "bun scripts/docs/open-docs-preview.ts",
     "docs:render:open": "bun run build && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun dist/scripts/docs/render-open-docs-preview.js",
     "diagrams:validate": "bun run build && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun dist/scripts/diagrams/validate-diagrams.js",
@@ -58,10 +59,14 @@
     "lint-staged": "^17.0.7",
     "marked": "^18.0.4",
     "prettier": "^3.8.3",
+    "puppeteer": "^24.43.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.1"
   },
   "overrides": {
+    "brace-expansion": "5.0.8",
+    "js-yaml": "4.3.0",
+    "postcss": "8.5.23",
     "string-width": "4.2.3",
     "tar-fs": "2.1.4",
     "ws": "8.21.0"

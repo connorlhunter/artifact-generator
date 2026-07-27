@@ -23,6 +23,7 @@ describe("script constants", () => {
     expect(repoFiles.packageJson).toBe("package.json");
     expect(artifactPaths.coverageDir).toBe("coverage");
     expect(artifactPaths.docsPreview).toBe("dist/docs-preview/index.html");
+    expect(artifactPaths.docsPreviewPdf).toBe("dist/docs-preview/index.pdf");
     expect(artifactPaths.coverageReport).toBe("coverage/index.html");
     expect(sharedDiagramInputs).toEqual([`${sourceInputDirs.diagrams}/diagram-style-key.mmd`]);
   });

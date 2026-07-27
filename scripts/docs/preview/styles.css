@@ -1534,3 +1534,76 @@ main {
     transform: none;
   }
 }
+
+/*PRINT PDF*/
+
+@media print {
+  @page {
+    size: A4;
+  }
+
+  html,
+  body {
+    overflow: visible;
+    background: #ffffff;
+    color: #17202a;
+  }
+
+  .layout {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  nav,
+  .page-outline,
+  .nav-resize-handle,
+  .outline-resize-handle,
+  .github-link,
+  .doc-source {
+    display: none !important;
+  }
+
+  main {
+    height: auto;
+    overflow: visible;
+    contain: none;
+    padding: 0;
+  }
+
+  .doc {
+    width: auto;
+    margin: 0 0 1rem;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    contain: none;
+    background: transparent;
+    break-inside: auto;
+  }
+
+  .doc + .doc {
+    break-before: page;
+  }
+
+  .doc-header {
+    padding: 0 0 0.75rem;
+  }
+
+  .doc-body {
+    padding: 1rem 0 0;
+  }
+
+  img,
+  svg,
+  pre,
+  table,
+  blockquote {
+    break-inside: avoid;
+  }
+
+  pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

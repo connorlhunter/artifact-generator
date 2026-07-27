@@ -73,6 +73,8 @@ describe("docs preview assets", () => {
       "-webkit-overflow-scrolling: touch",
       "scrollbar-gutter: stable",
       "@media (prefers-reduced-motion: reduce)",
+      "@media print",
+      "break-before: page",
     ].forEach((styleHook) => {
       expect(docsPreviewStyles).toContain(styleHook);
     });
