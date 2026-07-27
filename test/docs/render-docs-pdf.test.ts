@@ -16,11 +16,20 @@ describe("renderDocsPdf", () => {
     const input = join(tempDir, "index.html");
     const output = join(tempDir, "index.pdf");
 
-    writeFileSync(input, "<!doctype html><title>Docs</title><main><h1>Docs</h1></main>");
+    writeFileSync(
+      input,
+      '<!doctype html><title>Docs</title><main><a href="diagrams/cipher/cipher-overview.html">Diagram</a></main>',
+    );
 
-    await expect(renderDocsPdf(input, output)).resolves.toBe(output);
+    await expect(
+      renderDocsPdf(input, output, "https://d1y1afhnwsku2p.cloudfront.net/docs/cipher/index.html"),
+    ).resolves.toBe(output);
     expect(existsSync(output)).toBe(true);
-    expect(readFileSync(output).subarray(0, 4).toString()).toBe("%PDF");
+    const pdf = readFileSync(output);
+    expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+    expect(pdf.toString()).toContain(
+      "https://d1y1afhnwsku2p.cloudfront.net/diagrams/cipher/cipher-overview.svg",
+    );
   });
 
   test("builds public docs URLs without a trailing origin slash", () => {

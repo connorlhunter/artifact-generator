@@ -442,6 +442,17 @@ export function renderCoverageHtml(files: CoverageFile[]): string {
         margin: 0.45in;
       }
 
+      :root {
+        color-scheme: light !important;
+        --accent: #0f6b7a !important;
+        --accent-soft: #e4f3f5 !important;
+        --bg: #f4f6f8 !important;
+        --border: #d8dee8 !important;
+        --muted: #667085 !important;
+        --panel: #ffffff !important;
+        --text: #17202a !important;
+      }
+
       html,
       body {
         background: #ffffff;

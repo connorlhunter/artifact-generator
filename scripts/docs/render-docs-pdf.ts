@@ -1,4 +1,5 @@
-import { dirname } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import puppeteer from "puppeteer";
 import { ensureDirectory } from "../core/bun-native-fs.ts";
@@ -22,6 +23,31 @@ export function publicDocsUrl(
   return normalizedOrigin ? `${normalizedOrigin}/docs/${project}/index.html` : undefined;
 }
 
+function renderPdfHtml(input: string, publicUrl?: string): string {
+  const localBaseUrl = `${pathToFileURL(resolve(dirname(input))).href}/`;
+  const html = readFileSync(input, "utf8").replace("<head>", `<head><base href="${localBaseUrl}">`);
+  const themeScript =
+    '<script>document.documentElement.dataset.scheme="atlas";document.documentElement.style.colorScheme="light";</script>';
+
+  const withPublicLinks = publicUrl
+    ? html.replace(/href=(['"])([^'"]+)\1/gu, (attribute, quote: string, href: string) => {
+        if (href.startsWith("#") || /^[a-z][a-z0-9+.-]*:/iu.test(href)) return attribute;
+
+        const baseUrl = new URL(".", publicUrl);
+        const diagramMatch = /^diagrams\/(.+)\.html$/u.exec(href);
+        const target = diagramMatch?.[1]
+          ? new URL(`/diagrams/${diagramMatch[1]}.svg`, baseUrl)
+          : new URL(href, baseUrl);
+
+        return `href=${quote}${target.href}${quote}`;
+      })
+    : html;
+
+  return withPublicLinks.includes("</body>")
+    ? withPublicLinks.replace("</body>", `${themeScript}</body>`)
+    : `${withPublicLinks}${themeScript}`;
+}
+
 /**
  * Renders a standalone docs preview to a downloadable print PDF.
  *
@@ -42,23 +68,7 @@ export async function renderDocsPdf(
     const page = await browser.newPage();
 
     await page.emulateMediaType("print");
-    await page.goto(pathToFileURL(input).href, { waitUntil: "networkidle0" });
-
-    await page.evaluate((documentUrl) => {
-      document.documentElement.dataset.scheme = "atlas";
-      document.documentElement.style.colorScheme = "light";
-
-      if (!documentUrl) return;
-
-      const baseUrl = new URL(".", documentUrl);
-
-      for (const link of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
-        const href = link.getAttribute("href");
-
-        if (!href || href.startsWith("#") || /^[a-z][a-z0-9+.-]*:/iu.test(href)) continue;
-        link.href = new URL(href, baseUrl).href;
-      }
-    }, publicUrl);
+    await page.setContent(renderPdfHtml(input, publicUrl), { waitUntil: "load" });
 
     await page.pdf({
       format: "A4",
