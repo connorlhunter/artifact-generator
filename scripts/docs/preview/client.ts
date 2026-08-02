@@ -11,6 +11,7 @@ const browserScriptOutputFiles = [
   "resize.js",
   "search.js",
   "source-buttons.js",
+  "fullscreen.js",
   "schemes.js",
   "index.js",
 ] as const;

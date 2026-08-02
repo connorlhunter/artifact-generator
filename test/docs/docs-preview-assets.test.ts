@@ -138,6 +138,10 @@ describe("docs preview assets", () => {
     expect(script).toContain("No matching docs");
     expect(script).toContain("Clear or change the search");
     expect(script).toContain("wireSchemeToggle");
+    expect(script).toContain("wireFullscreenGesture");
+    expect(script).toContain("connorhunter.file-viewer.enter-fullscreen");
+    expect(script).toContain('addEventListener("dblclick"');
+    expect(script).toContain('addEventListener("pointerup"');
     expect(script).toContain("applyProjectIcons");
     expect(script).toContain("tintProjectIconSvg");
     expect(script).toContain("themedProjectIconHref");
@@ -223,6 +227,7 @@ describe("docs preview assets", () => {
     expect(script).toContain("applySearch");
     expect(script).toContain("requestSearchUpdate");
     expect(script).toContain("wireSourceButtons");
+    expect(script).toContain("wireFullscreenGesture");
     expect(script).toContain("wireSchemeToggle");
     expect(script).toContain("wireMobileNavResize");
     expect(script).toContain("wireDesktopOutlineResize");

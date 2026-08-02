@@ -301,9 +301,15 @@ function coverageThemeScript(): string {
       const schemes = new Set(${JSON.stringify(Object.keys(coverageThemeSchemes))});
       const storageKeys = ${JSON.stringify([...coverageThemeStorageKeys])};
       const messageSuffix = ".theme.scheme";
+      const fullscreenMessageType = "connorhunter.file-viewer.enter-fullscreen";
+      const doubleTapDelay = 360;
+      const doubleTapDistance = 28;
+      const interactiveSelector = 'a, button, input, select, textarea, summary, [role="button"], [contenteditable="true"], [data-fullscreen-gesture-ignore]';
       const fallback = window.matchMedia?.("(prefers-color-scheme: dark)").matches
         ? "midnight"
         : "atlas";
+      let lastTouch = null;
+      let suppressDoubleClickUntil = 0;
 
       function savedScheme() {
         for (const key of storageKeys) {
@@ -323,6 +329,15 @@ function coverageThemeScript(): string {
         } catch {}
       }
 
+      function isInteractiveTarget(target) {
+        return target instanceof Element && Boolean(target.closest(interactiveSelector));
+      }
+
+      function requestHostFullscreen() {
+        if (window.parent === window) return;
+        window.parent.postMessage({ type: fullscreenMessageType }, "*");
+      }
+
       applyScheme(savedScheme() || fallback);
 
       window.addEventListener("message", (event) => {
@@ -331,6 +346,41 @@ function coverageThemeScript(): string {
         if (!schemes.has(message.scheme)) return;
         if (typeof message.type === "string" && !message.type.endsWith(messageSuffix)) return;
         applyScheme(message.scheme);
+      });
+
+      document.addEventListener("dblclick", (event) => {
+        if (event.timeStamp <= suppressDoubleClickUntil) {
+          suppressDoubleClickUntil = 0;
+          return;
+        }
+        if (isInteractiveTarget(event.target)) return;
+
+        event.preventDefault();
+        requestHostFullscreen();
+      });
+
+      document.addEventListener("pointerup", (event) => {
+        if (event.pointerType !== "touch") return;
+        if (isInteractiveTarget(event.target)) {
+          lastTouch = null;
+          return;
+        }
+
+        const currentTouch = { at: event.timeStamp, x: event.clientX, y: event.clientY };
+        const elapsed = lastTouch ? currentTouch.at - lastTouch.at : Number.POSITIVE_INFINITY;
+        const distance = lastTouch
+          ? Math.hypot(currentTouch.x - lastTouch.x, currentTouch.y - lastTouch.y)
+          : Number.POSITIVE_INFINITY;
+
+        if (elapsed >= 0 && elapsed <= doubleTapDelay && distance <= doubleTapDistance) {
+          lastTouch = null;
+          suppressDoubleClickUntil = currentTouch.at + doubleTapDelay;
+          event.preventDefault();
+          requestHostFullscreen();
+          return;
+        }
+
+        lastTouch = currentTouch;
       });
     })();
   </script>`;
@@ -364,6 +414,7 @@ export function renderCoverageHtml(files: CoverageFile[]): string {
       background: var(--bg);
       color: var(--text);
       font: 0.9375rem/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      touch-action: manipulation;
     }
 
     main {

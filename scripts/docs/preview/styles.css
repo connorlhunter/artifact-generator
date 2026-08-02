@@ -312,6 +312,7 @@ body {
   overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
+  touch-action: manipulation;
   font:
     0.9375rem/1.6 ui-sans-serif,
     system-ui,
