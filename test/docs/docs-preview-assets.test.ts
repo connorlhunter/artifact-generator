@@ -78,6 +78,16 @@ describe("docs preview assets", () => {
       "background: #f4f6f8",
       "color: #17202a",
       "background: #eef1f4",
+      "--surface-interactive",
+      "--search-match-bg",
+      "--search-match-border",
+      "--selection-bg",
+      "::selection",
+      ".search-highlight",
+      ".nav-search-context",
+      ".doc.is-search-match",
+      "background: var(--table-heading-bg)",
+      "border: 1px solid var(--code-border)",
     ].forEach((styleHook) => {
       expect(docsPreviewStyles).toContain(styleHook);
     });
@@ -123,6 +133,7 @@ describe("docs preview assets", () => {
     expect(script).toContain("state.pendingFrame = 0");
     expect(script).toContain("state.signal.aborted");
     expect(script).toContain("pendingResizeFrame");
+    expect(script).toContain("pendingSearchFrame");
     expect(script).toContain("cancelPendingMobileNavResize");
     expect(script).toContain("No matching docs");
     expect(script).toContain("Clear or change the search");
@@ -184,6 +195,13 @@ describe("docs preview assets", () => {
     expect(script).toContain("is-nav-collapsed");
     expect(script).toContain("jumpMainToArticle");
     expect(script).toContain("jumpMainToTarget");
+    expect(script).toContain("createPreviewSearchEntry");
+    expect(script).toContain("searchByArticleId");
+    expect(script).toContain("requestSearchUpdate");
+    expect(script).toContain("highlightSearchTerms");
+    expect(script).toContain("data-search-highlight");
+    expect(script).toContain("data-doc-search-context");
+    expect(script).toContain("of ${total} documents");
     expect(script).toContain("docs.preview.scheme");
     expect(script).toContain("portfolio.theme.scheme");
     expect(script).toContain("connorhunter.me");
@@ -203,6 +221,7 @@ describe("docs preview assets", () => {
     expect(script).toContain("wireDocNavigation");
     expect(script).toContain("wireOutlineNavigation");
     expect(script).toContain("applySearch");
+    expect(script).toContain("requestSearchUpdate");
     expect(script).toContain("wireSourceButtons");
     expect(script).toContain("wireSchemeToggle");
     expect(script).toContain("wireMobileNavResize");

@@ -4,6 +4,14 @@
 type CleanupFn = () => void;
 
 /**
+ * Searchable text collected from one rendered document.
+ */
+interface PreviewSearchEntry {
+  bodyText: string;
+  normalizedText: string;
+}
+
+/**
  * Shared state used by the inlined docs preview browser client.
  */
 interface PreviewState {
@@ -20,6 +28,7 @@ interface PreviewState {
   navControlsHandle: HTMLButtonElement | null;
   navResizeHandle: HTMLButtonElement | null;
   navGroups: HTMLElement[];
+  navCount: HTMLElement | null;
   navLinks: HTMLAnchorElement[];
   navSections: HTMLElement[];
   pageOutline: HTMLElement | null;
@@ -31,10 +40,12 @@ interface PreviewState {
   pendingMobileNavMagnet: boolean;
   pendingMobileNavHeight: number | null;
   pendingResizeFrame: number;
+  pendingSearchFrame: number;
   projectFavicon: HTMLLinkElement | null;
   projectIcons: HTMLImageElement[];
   resetTimers: Set<number>;
   searchEmpty: HTMLElement | null;
+  searchByArticleId: Map<string, PreviewSearchEntry>;
   searchInput: HTMLInputElement | null;
   signal: AbortSignal;
   schemeToggle: HTMLButtonElement | null;

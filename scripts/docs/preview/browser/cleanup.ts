@@ -10,6 +10,11 @@ function installCleanup(state: PreviewState): CleanupFn {
       state.pendingFrame = 0;
     }
 
+    if (state.pendingSearchFrame) {
+      window.cancelAnimationFrame(state.pendingSearchFrame);
+      state.pendingSearchFrame = 0;
+    }
+
     cancelPendingMobileNavResize(state);
     state.resetTimers.forEach((timer) => window.clearTimeout(timer));
     state.resetTimers.clear();

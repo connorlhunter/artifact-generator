@@ -1,5 +1,5 @@
 /*
- *TECHNIQUES & DESIGN DECISIONS
+ * Techniques and design decisions
  *
  * LAYOUT ISOLATED SCROLL COLUMNS
  * The three-column layout uses `height: 100vh` with a `100dvh` modern viewport
@@ -66,11 +66,21 @@
   --accent-soft: #e4f3f5;
   --code-bg: #eef3f6;
   --warm: #8a5a00;
-  --warm-soft: #fff6df;
   --scrollbar-thumb: rgb(15 107 122 / 22%);
   --scrollbar-thumb-hover: rgb(15 107 122 / 45%);
   --shadow-sm: 0 1px 3px rgb(23 32 42 / 6%), 0 1px 2px rgb(23 32 42 / 4%);
   --shadow: 0 4px 6px rgb(23 32 42 / 4%), 0 1.125rem 3.125rem rgb(23 32 42 / 8%);
+  --surface-interactive: color-mix(in srgb, var(--accent) 7%, var(--panel));
+  --border-strong: color-mix(in srgb, var(--text) 18%, var(--border));
+  --focus-ring: color-mix(in srgb, var(--accent) 24%, transparent);
+  --code-border: color-mix(in srgb, var(--accent) 16%, var(--border));
+  --table-heading-bg: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  --table-stripe-bg: color-mix(in srgb, var(--bg) 64%, var(--panel));
+  --callout-bg: color-mix(in srgb, var(--warm) 8%, var(--panel));
+  --callout-border: color-mix(in srgb, var(--warm) 38%, var(--border));
+  --search-match-bg: color-mix(in srgb, var(--warm) 24%, var(--panel));
+  --search-match-border: color-mix(in srgb, var(--warm) 70%, var(--border));
+  --selection-bg: color-mix(in srgb, var(--accent) 26%, var(--panel));
   --radius-sm: 0.375rem;
   --radius: 0.5rem;
   --radius-lg: 0.75rem;
@@ -96,7 +106,6 @@
   --accent-soft: #e4f3f5;
   --code-bg: #eef3f6;
   --warm: #8a5a00;
-  --warm-soft: #fff6df;
   --scrollbar-thumb: rgb(15 107 122 / 22%);
   --scrollbar-thumb-hover: rgb(15 107 122 / 45%);
   --shadow-sm: 0 1px 3px rgb(23 32 42 / 6%), 0 1px 2px rgb(23 32 42 / 4%);
@@ -113,7 +122,6 @@
   --accent-soft: #0d3040;
   --code-bg: #071721;
   --warm: #f0ad5d;
-  --warm-soft: #231a08;
   --scrollbar-thumb: rgb(95 192 238 / 25%);
   --scrollbar-thumb-hover: rgb(95 192 238 / 50%);
   --shadow-sm: 0 1px 3px rgb(0 0 0 / 32%), 0 1px 2px rgb(0 0 0 / 24%);
@@ -130,7 +138,6 @@
   --accent-soft: #ecefed;
   --code-bg: #eff0ed;
   --warm: #8a672f;
-  --warm-soft: #f7f1e3;
   --scrollbar-thumb: rgb(104 115 122 / 24%);
   --scrollbar-thumb-hover: rgb(104 115 122 / 46%);
   --shadow-sm: 0 1px 3px rgb(38 43 46 / 7%), 0 1px 2px rgb(38 43 46 / 5%);
@@ -147,7 +154,6 @@
   --accent-soft: #eeebc7;
   --code-bg: #f0efdc;
   --warm: #8b5a1f;
-  --warm-soft: #f8edcf;
   --scrollbar-thumb: rgb(118 111 24 / 24%);
   --scrollbar-thumb-hover: rgb(118 111 24 / 46%);
   --shadow-sm: 0 1px 3px rgb(54 51 20 / 7%), 0 1px 2px rgb(54 51 20 / 5%);
@@ -164,7 +170,6 @@
   --accent-soft: #0e2f3a;
   --code-bg: #0f1e2d;
   --warm: #d4a340;
-  --warm-soft: #231a08;
   --scrollbar-thumb: rgb(53 184 205 / 25%);
   --scrollbar-thumb-hover: rgb(53 184 205 / 50%);
   --shadow-sm: 0 1px 3px rgb(0 0 0 / 30%), 0 1px 2px rgb(0 0 0 / 20%);
@@ -181,16 +186,10 @@
   --accent-soft: #182234;
   --code-bg: #101419;
   --warm: #f0b36a;
-  --warm-soft: #25190d;
   --scrollbar-thumb: rgb(143 180 255 / 24%);
   --scrollbar-thumb-hover: rgb(143 180 255 / 48%);
   --shadow-sm: 0 1px 3px rgb(0 0 0 / 34%), 0 1px 2px rgb(0 0 0 / 24%);
   --shadow: 0 4px 6px rgb(0 0 0 / 24%), 0 1.125rem 3.125rem rgb(0 0 0 / 48%);
-}
-
-:root[data-scheme="harbor"] .doc-body blockquote {
-  border-color: #5a3e00;
-  border-left-color: #c47f00;
 }
 
 :root[data-scheme="rose"] {
@@ -203,7 +202,6 @@
   --accent-soft: #f1e6e8;
   --code-bg: #f6eef0;
   --warm: #8f5426;
-  --warm-soft: #f8efe5;
   --scrollbar-thumb: rgb(158 76 88 / 20%);
   --scrollbar-thumb-hover: rgb(158 76 88 / 40%);
   --shadow-sm: 0 1px 3px rgb(54 27 32 / 7%), 0 1px 2px rgb(54 27 32 / 5%);
@@ -220,7 +218,6 @@
   --accent-soft: #e4f0f6;
   --code-bg: #edf6fa;
   --warm: #8a5a00;
-  --warm-soft: #fff4d9;
   --scrollbar-thumb: rgb(63 130 168 / 22%);
   --scrollbar-thumb-hover: rgb(63 130 168 / 43%);
   --shadow-sm: 0 1px 3px rgb(23 64 86 / 7%), 0 1px 2px rgb(23 64 86 / 5%);
@@ -237,7 +234,6 @@
   --accent-soft: #ffe8d8;
   --code-bg: #fff2e4;
   --warm: #a85612;
-  --warm-soft: #fff0d8;
   --scrollbar-thumb: rgb(223 101 50 / 24%);
   --scrollbar-thumb-hover: rgb(223 101 50 / 48%);
   --shadow-sm: 0 1px 3px rgb(76 44 20 / 7%), 0 1px 2px rgb(76 44 20 / 5%);
@@ -254,14 +250,19 @@
   --accent-soft: #eeeaf8;
   --code-bg: #f1eef7;
   --warm: #8a6538;
-  --warm-soft: #f8f0e4;
   --scrollbar-thumb: rgb(124 111 159 / 22%);
   --scrollbar-thumb-hover: rgb(124 111 159 / 44%);
   --shadow-sm: 0 1px 3px rgb(46 39 62 / 7%), 0 1px 2px rgb(46 39 62 / 5%);
   --shadow: 0 4px 6px rgb(46 39 62 / 5%), 0 1.125rem 3.125rem rgb(46 39 62 / 10%);
 }
 
-/*THIN SCROLLBARSWEBKIT (Chrome, Safari, Edge) */
+:root[data-scheme="midnight"],
+:root[data-scheme="harbor"],
+:root[data-scheme="onyx"] {
+  color-scheme: dark;
+}
+
+/* Thin scrollbars: WebKit (Chrome, Safari, Edge) */
 
 ::-webkit-scrollbar {
   width: 5px;
@@ -285,12 +286,17 @@
   background: transparent;
 }
 
-/*RESET & BASE */
+/* Reset and base */
 
 * {
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--text);
 }
 
 [hidden] {
@@ -670,6 +676,10 @@ nav h1 {
   color: var(--text);
   font: inherit;
   padding: 0.5rem 0.625rem;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
 }
 
 .nav-search input[type="search"]::-webkit-search-cancel-button {
@@ -694,7 +704,8 @@ nav h1 {
 .nav-search input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--panel);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .search-empty {
@@ -763,19 +774,24 @@ nav h1 {
   margin: 1px 0;
   padding: 0.3125rem 0.5rem 0.3125rem 0.625rem;
   border-left: 2px solid var(--border);
-  color: var(--accent);
+  color: var(--muted);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   font-size: 0.875rem;
   overflow-wrap: anywhere;
   text-decoration: none;
-  transition: transform var(--motion-fast);
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
   backface-visibility: hidden;
 }
 
 .nav-group a:hover {
   transform: translate3d(2px, 0, 0);
-  background: var(--accent-soft);
+  background: var(--surface-interactive);
   border-left-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--text);
 }
 
 .nav-group a:focus-visible {
@@ -785,9 +801,39 @@ nav h1 {
 
 .nav-group a.is-active {
   border-left-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--surface-interactive);
   color: var(--text);
   font-weight: 700;
+}
+
+[data-doc-link-label] {
+  display: block;
+}
+
+.nav-search-context {
+  display: -webkit-box;
+  margin-top: 0.1875rem;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.71875rem;
+  font-weight: 400;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.nav-group a.is-active .nav-search-context {
+  color: color-mix(in srgb, var(--muted) 80%, var(--text));
+}
+
+.search-highlight {
+  border-bottom: 1px solid var(--search-match-border);
+  border-radius: 0.1875rem;
+  background: var(--search-match-bg);
+  color: inherit;
+  padding: 0 0.08em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 /*MAIN */
@@ -821,6 +867,10 @@ main {
     color-mix(in srgb, var(--accent) 5%, var(--panel)) 0px,
     var(--panel) 4px
   );
+}
+
+.doc.is-search-match {
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
 }
 
 .doc.has-github .doc-header {
@@ -888,6 +938,10 @@ main {
 
 .doc-body a:hover {
   text-decoration-thickness: 2px;
+}
+
+.doc-body a {
+  font-weight: 600;
 }
 
 /*GHOST BUTTONS */
@@ -985,6 +1039,7 @@ main {
   max-height: 27.5rem;
   overflow: auto;
   margin: 0.75rem 0 0;
+  border: 1px solid var(--code-border);
   border-radius: var(--radius);
   background: var(--code-bg);
   padding: 1rem;
@@ -1061,13 +1116,14 @@ main {
 
 .doc-body h1 {
   margin-top: 0;
+  color: color-mix(in srgb, var(--text) 88%, var(--accent));
   font-size: 1.875rem;
 }
 
 .doc-body h2 {
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-strong);
   font-size: 1.375rem;
 }
 
@@ -1077,6 +1133,7 @@ main {
 }
 
 .doc-body code {
+  border: 1px solid var(--code-border);
   border-radius: 0.25rem;
   background: var(--code-bg);
   padding: 0.125rem 0.3125rem;
@@ -1091,6 +1148,7 @@ main {
 
 .doc-body pre {
   overflow: auto;
+  border: 1px solid var(--code-border);
   border-radius: var(--radius);
   background: var(--code-bg);
   padding: 1rem;
@@ -1098,6 +1156,7 @@ main {
 }
 
 .doc-body pre code {
+  border: 0;
   background: transparent;
   padding: 0;
 }
@@ -1118,14 +1177,19 @@ main {
 }
 
 .doc-body thead th {
-  background: var(--code-bg);
+  background: var(--table-heading-bg);
+  color: var(--text);
   font-weight: 700;
   font-size: 0.8125rem;
   letter-spacing: 0.02em;
 }
 
 .doc-body tbody tr:nth-child(even) td {
-  background: color-mix(in srgb, var(--bg) 60%, var(--panel));
+  background: var(--table-stripe-bg);
+}
+
+.doc-body tbody tr:hover td {
+  background: var(--surface-interactive);
 }
 
 .doc-body th,
@@ -1138,13 +1202,18 @@ main {
 
 .doc-body blockquote {
   margin-left: 0;
-  border: 1px solid color-mix(in srgb, var(--warm) 35%, var(--warm-soft));
+  border: 1px solid var(--callout-border);
   border-left: 4px solid var(--warm);
   border-radius: var(--radius-sm);
-  background: var(--warm-soft);
+  background: var(--callout-bg);
   color: var(--text);
   padding: 0.75rem 1rem;
-  font-style: italic;
+  font-style: normal;
+}
+
+.doc-body li::marker {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .doc-body blockquote > :first-child {
