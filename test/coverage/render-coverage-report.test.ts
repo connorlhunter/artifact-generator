@@ -52,6 +52,9 @@ describe("render coverage report", () => {
     expect(html).toContain('data-scheme="atlas"');
     expect(html).toContain("connorhunter.theme.scheme");
     expect(html).toContain('message.type.endsWith(messageSuffix)');
+    expect(html).toContain("connorhunter.file-viewer.enter-fullscreen");
+    expect(html).toContain('document.addEventListener("dblclick"');
+    expect(html).toContain('document.addEventListener("pointerup"');
     expect(html).toContain("75.00%");
     expect(html).toContain("50.00%");
     expect(html).toContain("scripts/example.ts");

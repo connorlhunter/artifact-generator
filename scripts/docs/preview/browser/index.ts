@@ -11,6 +11,7 @@ function startDocsPreviewClient(): void {
   wireDesktopNavResize(state);
   wireDesktopOutlineResize(state);
   wireMobileNavResize(state);
+  wireFullscreenGesture(state);
   wireSchemeToggle(state);
   wireSourceButtons(state);
   state.searchInput?.addEventListener("input", () => requestSearchUpdate(state), {
