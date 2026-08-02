@@ -113,7 +113,7 @@ The project uses Bun for installs, scripts, and tests. TypeScript is compiled wi
 
 `bun run verify` runs the dependency audit, formatting check, lint, typecheck, and test suite. The committed pre-commit and pre-push hooks run the same command.
 
-Dependency pins live in `dependency-pins.json`. Temporary release-age exceptions live in `dependency-release-age-excludes.json`; keep that file empty unless a pinned urgent update cannot wait for the configured one-week release age.
+Dependency pins and temporary release-age exceptions live in `dependency-policy.toml`. Keep the exception table empty unless a pinned urgent update cannot wait for the configured one-week release age.
 
 ## Documentation
 
