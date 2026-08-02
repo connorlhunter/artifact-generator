@@ -29,17 +29,32 @@ bun run verify
 ## Source Inputs
 
 ```text
-tmp/s3-inputs/artifacts/docs/      Markdown docs
-tmp/s3-inputs/artifacts/diagrams/  Mermaid sources and rendered SVGs
-tmp/s3-inputs/artifacts/manifests/ Portfolio content and artifact manifests
-tmp/s3-inputs/artifacts/profile/   Profile page content
-tmp/s3-inputs/artifacts/projects/  Project content and artifact links
-tmp/s3-inputs/assets/assets/       Shared static images
-tmp/s3-inputs/assets/icons/        Project icon packs
-tmp/s3-inputs/assets/resume/       Resume PDF
+<source-root>/artifacts/docs/      Markdown docs
+<source-root>/artifacts/diagrams/  Mermaid sources and rendered SVGs
+<source-root>/artifacts/manifests/ Portfolio content and artifact manifests
+<source-root>/artifacts/profile/   Profile page content
+<source-root>/artifacts/projects/  Project content and artifact links
+<source-root>/assets/assets/       Shared static images
+<source-root>/assets/icons/        Project icon packs
+<source-root>/assets/resume/       Resume PDF
 ```
 
-The source buckets and publish destinations are configured in `.env`. Use `.env.example` as the reference.
+The default source root is `tmp/s3-inputs/`. The source buckets and publish destinations are configured in `.env`; use `.env.example` as the reference.
+
+### Local Bundle
+
+Pass one explicit `local=<path>` argument to read a different bundle without syncing S3 first:
+
+```bash
+bun run docs:render:open -- artifact-generator local=/absolute/path/to/source-inputs
+bun run diagrams:render -- connor-hunter local=/absolute/path/to/source-inputs
+bun run artifacts:build -- local=/absolute/path/to/source-inputs
+bun run artifacts:ship -- local=/absolute/path/to/source-inputs
+```
+
+`local=<path>` overrides `SOURCE_INPUT_CACHE_DIR`. Relative paths resolve from this repository. Quote the full argument when the path contains spaces. The generator does not guess folder locations; the selected directory must use the source shape above.
+
+`artifacts:source:publish -- local=<path>` uploads that bundle to the configured source buckets. It validates every required folder before the first upload.
 
 ## Outputs
 
@@ -67,6 +82,7 @@ Project coverage folders are excluded from the generator bundle. Each applicatio
 | Build publish bundles      | `bun run artifacts:build`                   |
 | Publish generated bundles  | `bun run artifacts:publish`                 |
 | Build and publish bundles  | `bun run artifacts:ship`                    |
+| Build from a local bundle  | `bun run artifacts:build -- local=<path>`   |
 | Run the full quality check | `bun run verify`                            |
 
 Docs and diagram commands require one project slug. Root pipeline docs are included with the `artifact-generator` preview.

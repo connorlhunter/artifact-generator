@@ -11,6 +11,7 @@ import {
 } from "./docs-utils.ts";
 import { copyFile, ensureDirectory, writeText } from "../core/bun-native-fs.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
+import { validateSourceInputSelection } from "../core/source-input-selection.ts";
 import { logError, logGroup, logHeading, logItem, logSuccess } from "../core/script-logger.ts";
 import { renderDiagramPreviewPage } from "./preview/diagram-page-html.ts";
 import { renderDocsPreviewPage } from "./preview/html.ts";
@@ -86,6 +87,7 @@ async function copyPreviewAsset(
  * @returns {Promise<string>} Generated HTML preview path.
  */
 export async function renderDocsPreview(args: string[]): Promise<string> {
+  validateSourceInputSelection();
   const options = parseDocsPreviewOptions(args);
 
   if (options.roots.length === 0) {

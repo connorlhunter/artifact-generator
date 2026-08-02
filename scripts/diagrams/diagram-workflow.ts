@@ -1,5 +1,9 @@
 import { findDiagrams, getDiagramRoots } from "./diagram-utils.ts";
 import { logError, logStep } from "../core/script-logger.ts";
+import {
+  sourceInputCommandArgs,
+  validateSourceInputSelection,
+} from "../core/source-input-selection.ts";
 import type { DiagramJob } from "./diagram-types.ts";
 
 /**
@@ -20,7 +24,8 @@ export function logWorkflowStep(step: number, total: number, label: string): voi
  * @returns {{ input: string; output: string }[]} Mermaid render jobs.
  */
 export function diagramsFromArgs(args: string[]): DiagramJob[] {
-  return findDiagrams(getDiagramRoots(args));
+  validateSourceInputSelection();
+  return findDiagrams(getDiagramRoots(sourceInputCommandArgs(args)));
 }
 
 /**

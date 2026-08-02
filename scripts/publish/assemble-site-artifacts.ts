@@ -11,6 +11,10 @@ import { dirname, join, relative } from "node:path";
 import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 import { ensureDirectory } from "../core/bun-native-fs.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
+import {
+  sourceInputCommandArgs,
+  validateSourceInputSelection,
+} from "../core/source-input-selection.ts";
 import { logError, logHeading, logItem, logSuccess } from "../core/script-logger.ts";
 import { isHiddenSourcePath } from "./source-input-exclusions.ts";
 
@@ -302,6 +306,7 @@ export function assembleSiteArtifacts(options: AssembleSiteArtifactsOptions = {}
   readonly siteArtifacts: string;
   readonly siteAssets: string;
 } {
+  validateSourceInputSelection();
   cleanPublishOutputs();
 
   logHeading("Assembling site artifact bundle", { count: 10 });
@@ -324,7 +329,9 @@ export function assembleSiteArtifacts(options: AssembleSiteArtifactsOptions = {}
 /* istanbul ignore next */
 if (isEntrypoint(import.meta.url)) {
   try {
-    const [docsProject] = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+    const [docsProject] = sourceInputCommandArgs(process.argv.slice(2)).filter(
+      (arg) => !arg.startsWith("--"),
+    );
     assembleSiteArtifacts(docsProject ? { docsProject } : {});
   } catch (error) {
     logError(error instanceof Error ? error.message : String(error));

@@ -14,7 +14,7 @@ describe("diagram workflow", () => {
   });
 
   test("maps cli args to diagrams and outputs", () => {
-    const diagrams = diagramsFromArgs([diagramsFixtureRoot]);
+    const diagrams = diagramsFromArgs([diagramsFixtureRoot, "local=/workspace/source"]);
 
     expect(diagrams.map((diagram) => diagram.input)).toEqual(
       expect.arrayContaining(diagramJobs.map((job) => job.input)),

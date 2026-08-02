@@ -1,4 +1,5 @@
 import { getDocRoots, type MarkdownDoc } from "../docs-utils.ts";
+import { sourceInputCommandArgs } from "../../core/source-input-selection.ts";
 
 /**
  * Optional GitHub source-link settings for generated docs.
@@ -81,11 +82,13 @@ export function parseDocsPreviewOptions(args: string[]): DocsPreviewOptions {
   let githubRepo: string | undefined;
   let githubBranch = defaultGitHubBranch;
 
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index] as string;
+  const commandArgs = sourceInputCommandArgs(args);
+
+  for (let index = 0; index < commandArgs.length; index += 1) {
+    const arg = commandArgs[index] as string;
 
     if (arg === "--github") {
-      githubRepo = args[(index += 1)];
+      githubRepo = commandArgs[(index += 1)];
       continue;
     }
 
@@ -95,7 +98,7 @@ export function parseDocsPreviewOptions(args: string[]): DocsPreviewOptions {
     }
 
     if (arg === "--github-branch") {
-      githubBranch = args[(index += 1)] ?? githubBranch;
+      githubBranch = commandArgs[(index += 1)] ?? githubBranch;
       continue;
     }
 
