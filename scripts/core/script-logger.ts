@@ -24,6 +24,14 @@ export interface FailureDetails {
 }
 
 /**
+ * @param value - Caught error value.
+ * @returns Whether the value contains captured command failure details.
+ */
+export function isFailureDetails(value: unknown): value is FailureDetails {
+  return value !== null && typeof value === "object" && ("stderr" in value || "stdout" in value);
+}
+
+/**
  * Options for headings and success/error lines that include counts.
  */
 export interface CountedLogOptions {

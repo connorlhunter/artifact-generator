@@ -1,4 +1,5 @@
 import { publishOutputs } from "./assemble-site-artifacts.ts";
+import { envValue, requiredEnv } from "../core/environment.ts";
 import { runCommand } from "../core/process-utils.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import {
@@ -8,6 +9,7 @@ import {
   logHeading,
   logItem,
   logSuccess,
+  isFailureDetails,
 } from "../core/script-logger.ts";
 
 interface PublishDestination {
@@ -31,36 +33,6 @@ const artifactsPrefixEnv = "ARTIFACTS_PREFIX";
 const assetsBucketEnv = "ASSETS_BUCKET";
 const assetsCloudFrontDistributionEnv = "ASSETS_CLOUDFRONT_DISTRIBUTION_ID";
 const assetsPrefixEnv = "ASSETS_PREFIX";
-
-/**
- * @param value - Environment value to normalize.
- * @returns Trimmed environment value.
- */
-function envValue(value: string | undefined): string {
-  return value?.trim() ?? "";
-}
-
-/**
- * @param name - Required environment variable name.
- * @returns Non-empty environment variable value.
- */
-function requiredEnv(name: string): string {
-  const value = envValue(process.env[name]);
-
-  if (!value) {
-    throw new Error(`Missing ${name}. Set it in your local shell, .env, or CI variables.`);
-  }
-
-  return value;
-}
-
-/**
- * @param value - Caught error value.
- * @returns Whether the value looks like captured command failure details.
- */
-function isFailureDetails(value: unknown): value is Parameters<typeof logFailureDetails>[0] {
-  return value !== null && typeof value === "object" && ("stderr" in value || "stdout" in value);
-}
 
 /**
  * @param bucket - S3 bucket name.
@@ -89,7 +61,7 @@ function invalidationPath(prefix: string): string {
 export function publishDestinations(): PublishDestination[] {
   return [
     {
-      bucket: requiredEnv(artifactsBucketEnv),
+      bucket: requiredEnv(process.env, artifactsBucketEnv),
       cloudFrontDistributionId: envValue(process.env[artifactsCloudFrontDistributionEnv]),
       label: "Artifact bundle",
       prefix: envValue(process.env[artifactsPrefixEnv]),
@@ -102,7 +74,7 @@ export function publishDestinations(): PublishDestination[] {
       ],
     },
     {
-      bucket: requiredEnv(assetsBucketEnv),
+      bucket: requiredEnv(process.env, assetsBucketEnv),
       cloudFrontDistributionId: envValue(process.env[assetsCloudFrontDistributionEnv]),
       label: "Asset bundle",
       prefix: envValue(process.env[assetsPrefixEnv]),
