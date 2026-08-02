@@ -30,7 +30,6 @@ describe("publish source inputs", () => {
       ["Manifest source", "artifact-source", "manifests"],
       ["Profile source", "artifact-source", "profile"],
       ["Project source", "artifact-source", "projects"],
-      ["Asset source", "asset-source", "assets"],
       ["Icon source", "asset-source", "icons"],
     ]);
   });
@@ -45,7 +44,6 @@ describe("publish source inputs", () => {
       sourceInputDirs.manifests,
       sourceInputDirs.profile,
       sourceInputDirs.projects,
-      sourceInputDirs.assets,
       sourceInputDirs.icons,
     ];
     for (const folder of sourceFolders) {
@@ -63,7 +61,7 @@ describe("publish source inputs", () => {
       },
     });
 
-    expect(commands).toHaveLength(7);
+    expect(commands).toHaveLength(6);
     expect(commands[0]).toEqual({
       args: [
         "s3",

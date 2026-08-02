@@ -1,6 +1,6 @@
 # Artifact Generator
 
-Builds and publishes the docs, diagrams, metadata, static assets, generated resume, and Artifact Generator coverage used by the portfolio.
+Builds and publishes the docs, diagrams, metadata, icons, generated resume, and Artifact Generator coverage used by the portfolio.
 
 Application repositories publish their own coverage. This repo publishes its own coverage and the shared artifact bundles.
 
@@ -25,7 +25,7 @@ bun run verify
 5. Run `bun run verify`.
 6. Run `bun run artifacts:ship` to rebuild and publish the generated bundles.
 
-`artifacts:ship` does not publish the editable S3 source inputs. Run `artifacts:source:publish` first when docs, diagrams, metadata, images, or icons changed. Resume source is tracked in `resume/` and compiled during the artifact build.
+`artifacts:ship` does not publish the editable S3 source inputs. Run `artifacts:source:publish` first when docs, diagrams, metadata, or icons changed. Resume source is tracked in `resume/` and compiled during the artifact build.
 
 ## Source Inputs
 
@@ -35,7 +35,6 @@ bun run verify
 <source-root>/artifacts/manifests/ Portfolio content and artifact manifests
 <source-root>/artifacts/profile/   Profile page content
 <source-root>/artifacts/projects/  Project content and artifact links
-<source-root>/assets/assets/       Shared static images
 <source-root>/assets/icons/        Project icon packs
 ```
 
@@ -63,7 +62,7 @@ dist/docs-preview/   Current docs HTML/PDF preview and copied viewer assets
 coverage/            Artifact Generator coverage HTML/PDF
 dist/resume/         Generated resume PDF
 dist/site-artifacts/ CloudFront-ready docs, diagrams, content, and coverage
-dist/site-assets/    CloudFront-ready icons, images, and resume assets
+dist/site-assets/    CloudFront-ready icons and generated resume
 ```
 
 Project coverage folders are excluded from the generator bundle. Each application repo publishes its report directly to its manifest path.
