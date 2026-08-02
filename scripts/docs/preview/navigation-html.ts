@@ -37,7 +37,10 @@ export function renderNavigation(docs: MarkdownDoc[]): string {
                 data-doc-link
                 data-doc-id="${doc.id}"
                 data-doc-search="${escapeHtml(docSearchText(doc))}"
-              >${escapeHtml(docLinkLabel(doc))}</a>
+              >
+                <span data-doc-link-label>${escapeHtml(docLinkLabel(doc))}</span>
+                <span class="nav-search-context" data-doc-search-context hidden></span>
+              </a>
             `,
               )
               .join("")}

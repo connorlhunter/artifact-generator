@@ -1,5 +1,6 @@
 import { runCommand } from "../core/process-utils.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
+import { validateSourceInputSelection } from "../core/source-input-selection.ts";
 import {
   logCaughtError,
   logError,
@@ -47,16 +48,19 @@ export function sourcePublishPlans(env: NodeJS.ProcessEnv = process.env): Source
  * @param options - Publish options.
  */
 export async function publishSourceInputs(options: PublishSourceInputsOptions = {}): Promise<void> {
+  validateSourceInputSelection();
   const commandRunner = options.commandRunner ?? runCommand;
   const plans = sourcePublishPlans(options.env ?? process.env);
-
-  logHeading("Publishing artifact source inputs to S3", { count: plans.length });
 
   for (const plan of plans) {
     if (plan.required && !hasSourceEntries(plan.source)) {
       throw new Error(`No source files found for ${plan.label}: ${plan.source}`);
     }
+  }
 
+  logHeading("Publishing artifact source inputs to S3", { count: plans.length });
+
+  for (const plan of plans) {
     const target = sourceInputS3Uri({ ...plan, sourceFolder: plan.targetFolder });
     logItem(`${plan.label}: ${plan.source} -> ${target}`, 1);
     await commandRunner(

@@ -13,7 +13,7 @@ function startDocsPreviewClient(): void {
   wireMobileNavResize(state);
   wireSchemeToggle(state);
   wireSourceButtons(state);
-  state.searchInput?.addEventListener("input", () => applySearch(state), {
+  state.searchInput?.addEventListener("input", () => requestSearchUpdate(state), {
     signal: state.signal,
   });
   (state.main ?? window).addEventListener("scroll", () => requestActiveUpdate(state), {

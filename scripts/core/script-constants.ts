@@ -1,5 +1,5 @@
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { sourceInputSelection } from "./source-input-selection.ts";
 
 /**
  * Repository directory names used by scripts.
@@ -15,16 +15,14 @@ export const repoDirs = {
 } as const;
 
 /**
- * Private cache root for source inputs pulled from S3.
+ * Root for source inputs pulled from S3 or selected with `local=<path>`.
  *
- * This is an implementation cache only. S3 remains the source of truth, and
- * callers can override the path when they need to inspect synced inputs.
+ * The CLI selector takes precedence over the configured S3 cache directory.
  */
-export const sourceInputRoot =
-  process.env.SOURCE_INPUT_CACHE_DIR?.trim() || join(tmpdir(), "artifact-generator-source-cache");
+export const sourceInputRoot = sourceInputSelection.root;
 
 /**
- * S3-backed source input directories used before artifacts are rendered.
+ * Source input directories used before artifacts are rendered.
  */
 export const sourceInputDirs = {
   artifacts: join(sourceInputRoot, "artifacts"),

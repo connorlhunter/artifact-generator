@@ -8,6 +8,10 @@ import { artifactPaths, sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logError, logHeading, logItem, logSuccess } from "../core/script-logger.ts";
 import {
+  sourceInputCommandArgs,
+  validateSourceInputSelection,
+} from "../core/source-input-selection.ts";
+import {
   cleanPublishOutputs,
   copyDocsPreview,
   copyRenderedDiagrams,
@@ -45,6 +49,8 @@ export function projectSlugsFromManifest(manifestPath = projectManifestPath): st
  * @param docsArgs - Extra docs render args such as GitHub source-link options.
  */
 export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void> {
+  validateSourceInputSelection();
+  const commandArgs = sourceInputCommandArgs(docsArgs);
   const projectSlugs = projectSlugsFromManifest();
 
   if (projectSlugs.length === 0) {
@@ -60,7 +66,7 @@ export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void>
   for (const slug of projectSlugs) {
     logItem(`Rendering docs preview for ${slug}`, 1);
     rmSync(dirname(artifactPaths.docsPreview), { force: true, recursive: true });
-    await renderDocsPreview([slug, ...docsArgs]);
+    await renderDocsPreview([slug, ...commandArgs]);
     await renderDocsPdf(undefined, undefined, publicDocsUrl(slug));
     copyDocsPreview(slug);
   }

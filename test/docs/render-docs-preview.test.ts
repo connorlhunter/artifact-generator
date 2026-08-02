@@ -78,10 +78,14 @@ describe("render docs preview", () => {
     expect(html).toContain("<h1>Docs Fixture</h1>");
     expect(html).not.toContain("Architecture Docs");
     expect(html).toContain("data-doc-search-input");
+    expect(html).toContain("Search documentation");
+    expect(html).toContain("data-nav-count");
     expect(html).toContain('class="nav-panel"');
     expect(html).toContain('class="page-outline"');
     expect(html).toContain("data-outline-links");
     expect(html).toContain("data-doc-link");
+    expect(html).toContain("data-doc-link-label");
+    expect(html).toContain("data-doc-search-context");
     expect(html).toContain("is-active");
     expect(html).toContain('class="project-icon title-project-icon"');
     expect(html).toContain("activeArticleId");
@@ -172,7 +176,7 @@ describe("render docs preview", () => {
     expect(html).not.toContain(pathToFileURL(resolve(markdownPaths.fixtureDocsIndex)).href);
     expect(html).toContain("#doc-docs-fixture-nested-guide-md");
     expect(html).toContain("<h3>Docs Fixture</h3>");
-    expect(html).toContain(">Index</a>");
+    expect(html).toContain(">Index</span>");
     expect(html).toContain(
       '<a target="_blank" rel="noopener" href="diagrams/diagram-style-key.html">Diagram Key</a>',
     );
@@ -217,6 +221,7 @@ describe("render docs preview", () => {
       repo: "example/docs",
     });
     expect(parseDocsPreviewOptions(["--github-branch=docs-preview"]).github).toBeUndefined();
+    expect(parseDocsPreviewOptions(["local=/workspace/source"]).roots).toEqual([]);
   });
 
   test("renders source-cache docs with logical artifact paths", async () => {

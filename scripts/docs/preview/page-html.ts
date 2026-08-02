@@ -77,11 +77,11 @@ ${themeBootstrapScript()}
                   <span class="scheme-toggle-dot" aria-hidden="true"></span>
                 </button>
               </div>
-              <p class="nav-count">${page.documentCount} documents</p>
+              <p class="nav-count" data-nav-count aria-live="polite">${page.documentCount} documents</p>
             </div>
             <label class="nav-search">
               <span>Search</span>
-              <input type="search" data-doc-search-input placeholder="Filter docs">
+              <input type="search" data-doc-search-input placeholder="Search documentation" autocomplete="off">
             </label>
             <p class="search-empty" data-search-empty hidden>No matching docs</p>
           </div>

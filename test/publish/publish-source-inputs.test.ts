@@ -94,6 +94,25 @@ describe("publish source inputs", () => {
     expect(() => sourcePublishPlans({})).toThrow("Missing SOURCE_ARTIFACTS_BUCKET");
   });
 
+  test("validates every local folder before publishing any source", async () => {
+    const commands: string[][] = [];
+    writeFixtureFile(join(sourceInputDirs.docs, "fixture.md"), "fixture");
+
+    await expect(
+      publishSourceInputs({
+        commandRunner: async (_command, args) => {
+          commands.push(args);
+          return { stderr: "", stdout: "" };
+        },
+        env: {
+          SOURCE_ARTIFACTS_BUCKET: "artifact-source",
+          SOURCE_ASSETS_BUCKET: "asset-source",
+        },
+      }),
+    ).rejects.toThrow("No source files found for Diagram source");
+    expect(commands).toEqual([]);
+  });
+
   test("excludes hidden source paths without naming machine-specific files", () => {
     expect(hiddenSourcePathExcludeArgs()).toEqual(["--exclude", ".*", "--exclude", "*/.*"]);
     expect(isHiddenSourcePath("project/.local-metadata")).toBe(true);

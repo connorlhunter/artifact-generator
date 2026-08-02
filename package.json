@@ -10,7 +10,7 @@
     "artifacts:assemble": "SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun scripts/publish/assemble-site-artifacts.ts",
     "artifacts:build": "bun run test:coverage && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun scripts/publish/build-site-artifacts.ts",
     "artifacts:publish": "bun scripts/publish/publish-site-artifacts.ts",
-    "artifacts:ship": "bun run artifacts:build && bun run artifacts:publish",
+    "artifacts:ship": "bun run test:coverage && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun scripts/publish/ship-site-artifacts.ts",
     "artifacts:source:publish": "SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun scripts/publish/publish-source-inputs.ts",
     "artifacts:source:sync": "SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun scripts/publish/sync-source-inputs.ts",
     "deps:policy": "bun scripts/dependencies/sync-dependency-policy.ts",
