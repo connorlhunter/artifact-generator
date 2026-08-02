@@ -19,6 +19,7 @@ describe("script constants", () => {
       dist: "dist",
       docs: "docs",
       icons: "icons",
+      resume: "resume",
     });
     expect(repoFiles.packageJson).toBe("package.json");
     expect(artifactPaths.coverageDir).toBe("coverage");
@@ -26,6 +27,11 @@ describe("script constants", () => {
     expect(artifactPaths.docsPreviewPdf).toBe("dist/docs-preview/index.pdf");
     expect(artifactPaths.coverageReport).toBe("coverage/index.html");
     expect(artifactPaths.coverageReportPdf).toBe("coverage/index.pdf");
+    expect(artifactPaths.resumeBuildPdf).toBe(
+      "resume/build/connor-hunter-resume/connor-hunter-resume.pdf",
+    );
+    expect(artifactPaths.resumeConfig).toBe("resume/Tectonic.toml");
+    expect(artifactPaths.resumePdf).toBe("dist/resume/connor-hunter-resume.pdf");
     expect(sharedDiagramInputs).toEqual([`${sourceInputDirs.diagrams}/diagram-style-key.mmd`]);
   });
 
@@ -44,5 +50,6 @@ describe("script constants", () => {
       portEnv: "DOCS_PREVIEW_PORT",
     });
     expect(executables.bun).toBe(process.platform === "win32" ? "bun.cmd" : "bun");
+    expect(executables.tectonic).toBe(process.platform === "win32" ? "tectonic.exe" : "tectonic");
   });
 });

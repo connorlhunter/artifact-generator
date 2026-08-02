@@ -280,10 +280,10 @@ export function copySharedPublishInputs(): void {
       target: join(publishOutputs.siteAssets, repoDirs.icons),
     },
     {
-      label: "Resume assets",
+      label: "Generated resume",
       required: true,
-      source: sourceInputDirs.resume,
-      target: join(publishOutputs.siteAssets, "resume"),
+      source: artifactPaths.resumePdf,
+      target: join(publishOutputs.siteAssets, repoDirs.resume, "connor-hunter-resume.pdf"),
     },
   ];
 

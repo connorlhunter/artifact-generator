@@ -60,12 +60,6 @@ const sourceInputDefinitions: ReadonlyArray<SourceInputDefinition> = [
     storage: "assets",
     target: sourceInputDirs.icons,
   },
-  {
-    label: "Resume source",
-    sourceFolder: "resume",
-    storage: "assets",
-    target: sourceInputDirs.resume,
-  },
 ];
 
 /**

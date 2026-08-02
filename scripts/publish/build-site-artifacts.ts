@@ -7,6 +7,7 @@ import { renderDocsPreview } from "../docs/render-docs-preview.ts";
 import { artifactPaths, sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logError, logHeading, logItem, logSuccess } from "../core/script-logger.ts";
+import { buildResume } from "../resume/build-resume.ts";
 import {
   sourceInputCommandArgs,
   validateSourceInputSelection,
@@ -61,6 +62,7 @@ export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void>
   logHeading("Building project artifact bundle", { count: projectSlugs.length });
 
   await renderCoveragePdf();
+  await buildResume();
   await renderDiagrams(projectSlugs);
 
   for (const slug of projectSlugs) {

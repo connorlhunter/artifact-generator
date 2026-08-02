@@ -31,6 +31,7 @@
     "diagrams:render": "bun run build && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun dist/scripts/diagrams/render-diagrams.js",
     "diagrams:open": "bun run build && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun dist/scripts/diagrams/open-diagrams.js",
     "diagrams:render:open": "bun run build && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun dist/scripts/diagrams/render-open-diagrams.js",
+    "resume:build": "bun scripts/resume/build-resume.ts",
     "prepare": "bun scripts/git-hooks/setup-git-hooks.ts",
     "verify": "bun run audit && bun run format:check && bun run lint && bun run typecheck && bun run test"
   },

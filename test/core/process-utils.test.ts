@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { realpathSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { runCommand } from "../../scripts/core/process-utils.ts";
 import { commandFixture } from "../resources/docs.constants.ts";
 
@@ -32,6 +34,22 @@ describe("process utils", () => {
       }),
     ).rejects.toMatchObject({
       input: commandFixture.executable,
+    });
+  });
+
+  test("runs commands in the selected working directory", async () => {
+    await expect(
+      runCommand(
+        process.execPath,
+        ["-e", "process.stdout.write(process.cwd())"],
+        {},
+        {
+          cwd: tmpdir(),
+        },
+      ),
+    ).resolves.toEqual({
+      stdout: realpathSync(tmpdir()),
+      stderr: "",
     });
   });
 });

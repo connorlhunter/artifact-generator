@@ -6,7 +6,11 @@ import {
   assembleSiteArtifacts,
   publishOutputs,
 } from "../../scripts/publish/assemble-site-artifacts.ts";
-import { sourceInputDirs, sourceInputRoot } from "../../scripts/core/script-constants.ts";
+import {
+  artifactPaths,
+  sourceInputDirs,
+  sourceInputRoot,
+} from "../../scripts/core/script-constants.ts";
 
 describe("assemble site artifacts", () => {
   const originalCwd = process.cwd();
@@ -48,7 +52,7 @@ describe("assemble site artifacts", () => {
     writeFixtureFile("coverage/index.html", "<html>coverage</html>");
     writeFixtureFile("coverage/index.pdf", "%PDF-1.4");
     writeFixtureFile(`${sourceInputDirs.icons}/example/mark.svg`, "<svg>icon</svg>");
-    writeFixtureFile(`${sourceInputDirs.resume}/example.pdf`, "%PDF-1.4");
+    writeFixtureFile(artifactPaths.resumePdf, "%PDF-1.4");
 
     const output = assembleSiteArtifacts();
 
@@ -90,7 +94,7 @@ describe("assemble site artifacts", () => {
       true,
     );
     expect(existsSync("dist/site-assets/icons/example/mark.svg")).toBe(true);
-    expect(existsSync("dist/site-assets/resume/example.pdf")).toBe(true);
+    expect(existsSync("dist/site-assets/resume/connor-hunter-resume.pdf")).toBe(true);
   });
 
   test("requires the rendered docs preview before publishing", () => {
@@ -98,7 +102,7 @@ describe("assemble site artifacts", () => {
     writeFixtureFile(`${sourceInputDirs.profile}/profile.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.projects}/example.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.icons}/example/mark.svg`, "<svg>icon</svg>");
-    writeFixtureFile(`${sourceInputDirs.resume}/example.pdf`, "%PDF-1.4");
+    writeFixtureFile(artifactPaths.resumePdf, "%PDF-1.4");
 
     expect(() => assembleSiteArtifacts()).toThrow("Missing publish input: dist/docs-preview");
   });
@@ -113,7 +117,7 @@ describe("assemble site artifacts", () => {
     writeFixtureFile(`${sourceInputDirs.profile}/profile.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.projects}/example.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.icons}/example/mark.svg`, "<svg>icon</svg>");
-    writeFixtureFile(`${sourceInputDirs.resume}/example.pdf`, "%PDF-1.4");
+    writeFixtureFile(artifactPaths.resumePdf, "%PDF-1.4");
 
     assembleSiteArtifacts({ docsProject: "example" });
 

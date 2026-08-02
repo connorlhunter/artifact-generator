@@ -13,6 +13,20 @@ export interface CommandOutput {
 }
 
 /**
+ * Process settings that affect command execution without becoming failure context.
+ */
+export interface CommandOptions {
+  /**
+   * Working directory used by the child process.
+   */
+  cwd?: string;
+  /**
+   * Environment passed to the child process.
+   */
+  env?: NodeJS.ProcessEnv;
+}
+
+/**
  * Extra context attached to command failures for cleaner logs.
  */
 export type CommandContext = Record<string, unknown>;

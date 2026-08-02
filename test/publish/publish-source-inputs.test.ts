@@ -32,7 +32,6 @@ describe("publish source inputs", () => {
       ["Project source", "artifact-source", "projects"],
       ["Asset source", "asset-source", "assets"],
       ["Icon source", "asset-source", "icons"],
-      ["Resume source", "asset-source", "resume"],
     ]);
   });
 
@@ -48,7 +47,6 @@ describe("publish source inputs", () => {
       sourceInputDirs.projects,
       sourceInputDirs.assets,
       sourceInputDirs.icons,
-      sourceInputDirs.resume,
     ];
     for (const folder of sourceFolders) {
       writeFixtureFile(join(folder, "fixture.txt"), "fixture");
@@ -65,7 +63,7 @@ describe("publish source inputs", () => {
       },
     });
 
-    expect(commands).toHaveLength(8);
+    expect(commands).toHaveLength(7);
     expect(commands[0]).toEqual({
       args: [
         "s3",
@@ -81,12 +79,12 @@ describe("publish source inputs", () => {
       args: [
         "s3",
         "sync",
-        sourceInputDirs.resume,
-        "s3://asset-source/resume",
+        sourceInputDirs.icons,
+        "s3://asset-source/icons",
         "--delete",
         ...hiddenSourcePathExcludeArgs(),
       ],
-      subject: "Resume source",
+      subject: "Icon source",
     });
   });
 
