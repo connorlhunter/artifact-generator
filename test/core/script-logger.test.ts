@@ -10,6 +10,7 @@ import {
   logItem,
   logStep,
   logSuccess,
+  isFailureDetails,
 } from "../../scripts/core/script-logger.ts";
 
 describe("script logger", () => {
@@ -61,5 +62,8 @@ describe("script logger", () => {
     logCaughtError("plain failure");
     expect(error).toHaveBeenCalledWith("error failure");
     expect(error).toHaveBeenCalledWith("plain failure");
+
+    expect(isFailureDetails({ stderr: "failed" })).toBe(true);
+    expect(isFailureDetails(new Error("failed"))).toBe(false);
   });
 });
