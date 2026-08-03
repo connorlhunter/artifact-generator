@@ -24,6 +24,6 @@ tmp/
 /manifests/
 /profile/
 /projects/
-/resume/build/
+/resume/
 
 .DS_Store
