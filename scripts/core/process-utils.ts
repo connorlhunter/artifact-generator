@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import type { CommandContext, CommandOutput } from "./command-types.ts";
+import type { CommandContext, CommandOptions, CommandOutput } from "./command-types.ts";
 
 /**
  * Runs a child process and captures stdout/stderr for clean failure logs.
@@ -7,15 +7,19 @@ import type { CommandContext, CommandOutput } from "./command-types.ts";
  * @param {string} command - Command to run.
  * @param {string[]} args - Command arguments.
  * @param {Record<string, unknown>} context - Extra fields to include on failures.
+ * @param {CommandOptions} options - Process working directory and environment.
  * @returns {Promise<{ stdout: string; stderr: string }>} Captured command output.
  */
 export function runCommand(
   command: string,
   args: string[],
   context: CommandContext = {},
+  options: CommandOptions = {},
 ): Promise<CommandOutput> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
       stdio: ["ignore", "pipe", "pipe"],
     });
 

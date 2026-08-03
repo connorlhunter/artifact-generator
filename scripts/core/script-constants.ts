@@ -11,6 +11,7 @@ export const repoDirs = {
   docs: "docs",
   icons: "icons",
   nodeModules: "node_modules",
+  resume: "resume",
   test: "test",
 } as const;
 
@@ -34,7 +35,6 @@ export const sourceInputDirs = {
   projects: join(sourceInputRoot, "artifacts", "projects"),
   assets: join(sourceInputRoot, "assets", "assets"),
   icons: join(sourceInputRoot, "assets", repoDirs.icons),
-  resume: join(sourceInputRoot, "assets", "resume"),
 } as const;
 
 /**
@@ -60,6 +60,14 @@ export const artifactPaths = {
   coverageReportPdf: join(repoDirs.coverage, "index.pdf"),
   docsPreview: join(repoDirs.dist, "docs-preview", "index.html"),
   docsPreviewPdf: join(repoDirs.dist, "docs-preview", "index.pdf"),
+  resumeBuildPdf: join(
+    repoDirs.resume,
+    "build",
+    "connor-hunter-resume",
+    "connor-hunter-resume.pdf",
+  ),
+  resumeConfig: join(repoDirs.resume, "Tectonic.toml"),
+  resumePdf: join(repoDirs.dist, repoDirs.resume, "connor-hunter-resume.pdf"),
 } as const;
 
 /**
@@ -104,9 +112,14 @@ export const docsPreviewServer = {
  * Executable names that differ by platform.
  */
 let bunExecutable = "bun";
+let tectonicExecutable = "tectonic";
 /* istanbul ignore if -- Windows executable selection needs a Windows runtime. */
-if (process.platform === "win32") bunExecutable = "bun.cmd";
+if (process.platform === "win32") {
+  bunExecutable = "bun.cmd";
+  tectonicExecutable = "tectonic.exe";
+}
 
 export const executables = {
   bun: bunExecutable,
+  tectonic: tectonicExecutable,
 } as const;

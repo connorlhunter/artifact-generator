@@ -1,6 +1,6 @@
 # Artifact Generator
 
-Builds and publishes the docs, diagrams, metadata, static assets, resume, and Artifact Generator coverage used by the portfolio.
+Builds and publishes the docs, diagrams, metadata, static assets, generated resume, and Artifact Generator coverage used by the portfolio.
 
 Application repositories publish their own coverage. This repo publishes its own coverage and the shared artifact bundles.
 
@@ -8,6 +8,7 @@ Application repositories publish their own coverage. This repo publishes its own
 
 ```bash
 bun install
+brew install tectonic
 bun run artifacts:source:sync
 bun run docs:render:open -- artifact-generator
 bun run verify
@@ -24,7 +25,7 @@ bun run verify
 5. Run `bun run verify`.
 6. Run `bun run artifacts:ship` to rebuild and publish the generated bundles.
 
-`artifacts:ship` does not publish the editable source inputs. Run `artifacts:source:publish` first when docs, diagrams, metadata, icons, or resume files changed.
+`artifacts:ship` does not publish the editable S3 source inputs. Run `artifacts:source:publish` first when docs, diagrams, metadata, images, or icons changed. Resume source is tracked in `resume/` and compiled during the artifact build.
 
 ## Source Inputs
 
@@ -36,7 +37,6 @@ bun run verify
 <source-root>/artifacts/projects/  Project content and artifact links
 <source-root>/assets/assets/       Shared static images
 <source-root>/assets/icons/        Project icon packs
-<source-root>/assets/resume/       Resume PDF
 ```
 
 The default source root is `tmp/s3-inputs/`. The source buckets and publish destinations are configured in `.env`; use `.env.example` as the reference.
@@ -61,6 +61,7 @@ bun run artifacts:ship -- local=/absolute/path/to/source-inputs
 ```text
 dist/docs-preview/   Current docs HTML/PDF preview and copied viewer assets
 coverage/            Artifact Generator coverage HTML/PDF
+dist/resume/         Generated resume PDF
 dist/site-artifacts/ CloudFront-ready docs, diagrams, content, and coverage
 dist/site-assets/    CloudFront-ready icons, images, and resume assets
 ```
@@ -79,6 +80,7 @@ Project coverage folders are excluded from the generator bundle. Each applicatio
 | Render and open diagrams   | `bun run diagrams:render:open -- <project>` |
 | Generate coverage          | `bun run test:coverage`                     |
 | Open coverage              | `bun run coverage:open`                     |
+| Generate resume PDF        | `bun run resume:build`                      |
 | Build publish bundles      | `bun run artifacts:build`                   |
 | Publish generated bundles  | `bun run artifacts:publish`                 |
 | Build and publish bundles  | `bun run artifacts:ship`                    |
@@ -104,10 +106,12 @@ scripts/coverage/     LCOV parsing and HTML/PDF reports
 scripts/dependencies/ dependency policy sync
 scripts/git-hooks/    local Git hook setup
 scripts/publish/      source sync and generated bundle publishing
+scripts/resume/       tracked LaTeX resume compilation
+resume/               Tectonic project and resume source
 test/                 tests arranged to mirror the script folders
 ```
 
-The project uses Bun for installs, scripts, and tests. TypeScript is compiled with `tsgo`. Generated docs PDFs use Puppeteer and honor `PUPPETEER_EXECUTABLE_PATH` when it is set.
+The project uses Bun for installs, scripts, and tests. TypeScript is compiled with `tsgo`. Generated docs PDFs use Puppeteer and honor `PUPPETEER_EXECUTABLE_PATH` when it is set. The resume uses Tectonic's project model and pinned bundle from `resume/Tectonic.toml`.
 
 ## Quality Checks
 

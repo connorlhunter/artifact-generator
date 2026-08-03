@@ -24,7 +24,6 @@ describe("sync source inputs", () => {
       ["Project source", "artifact-source", "projects"],
       ["Asset source", "asset-source", "assets"],
       ["Icon source", "asset-source", "icons"],
-      ["Resume source", "asset-source", "resume"],
     ]);
   });
 
@@ -48,7 +47,7 @@ describe("sync source inputs", () => {
       },
     });
 
-    expect(commands).toHaveLength(8);
+    expect(commands).toHaveLength(7);
     expect(commands[0]).toEqual({
       args: [
         "s3",
@@ -63,11 +62,11 @@ describe("sync source inputs", () => {
       args: [
         "s3",
         "sync",
-        "s3://asset-source/resume",
-        `${sourceInputRoot}/assets/resume`,
+        "s3://asset-source/icons",
+        `${sourceInputRoot}/assets/icons`,
         "--delete",
       ],
-      subject: "Resume source",
+      subject: "Icon source",
     });
   });
 
