@@ -243,8 +243,9 @@ async function loadProjectIconSvg(href: string): Promise<string | null> {
   let cached = projectIconSvgCache.get(href);
   if (!cached) {
     cached = fetch(href)
-      .then((response): Promise<string | null> =>
-        response.ok ? response.text() : Promise.resolve(null),
+      .then(
+        (response): Promise<string | null> =>
+          response.ok ? response.text() : Promise.resolve(null),
       )
       .catch((): null => null);
     projectIconSvgCache.set(href, cached);

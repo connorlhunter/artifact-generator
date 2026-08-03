@@ -50,8 +50,8 @@ export async function renderDocsPreviewPage(
     loadDocsPreviewStyles(),
     loadDocsPreviewClientScript(),
     Promise.all(
-      orderedDocs.map((doc): Promise<RenderedDocArticle> =>
-        renderDocArticle(doc, knownIds, options),
+      orderedDocs.map(
+        (doc): Promise<RenderedDocArticle> => renderDocArticle(doc, knownIds, options),
       ),
     ),
   ]);
