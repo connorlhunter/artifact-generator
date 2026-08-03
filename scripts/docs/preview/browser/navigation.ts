@@ -111,7 +111,7 @@ function scrollNavLinkIntoView(
   link: HTMLAnchorElement,
   behavior: ScrollBehavior = previewScrollBehavior(),
 ): void {
-  if (!state.docNav) return;
+  if (!state.docNav || link.getClientRects().length === 0) return;
 
   const controlsHeight = state.navControls?.getBoundingClientRect().height ?? 0;
   const handleHeight = state.navResizeHandle?.getBoundingClientRect().height ?? 0;
@@ -122,6 +122,27 @@ function scrollNavLinkIntoView(
     bottomPadding: handleHeight + 12,
     topPadding: controlsHeight + 12,
   });
+}
+
+/**
+ * Applies one active heading state inside a left or right heading collection.
+ */
+function syncHeadingLinkState(
+  links: HTMLElement | null,
+  current: HTMLElement | undefined,
+): HTMLAnchorElement | undefined {
+  let activeLink: HTMLAnchorElement | undefined;
+
+  Array.from(links?.querySelectorAll<HTMLAnchorElement>("a") ?? []).forEach((link) => {
+    const active = Boolean(current) && link.hash === `#${current?.id}`;
+    link.classList.toggle("is-active", active);
+    if (active) {
+      link.setAttribute("aria-current", "true");
+      activeLink = link;
+    } else link.removeAttribute("aria-current");
+  });
+
+  return activeLink;
 }
 
 /**
@@ -211,8 +232,6 @@ function updateActiveHeading(
   state: PreviewState,
   behavior: ScrollBehavior = previewScrollBehavior(),
 ): void {
-  if (!state.outlineLinks) return;
-
   const atScrollEnd = isMainAtScrollEnd(state);
   let current = atScrollEnd ? state.activeHeadings.at(-1) : state.activeHeadings[0];
   if (!atScrollEnd) {
@@ -223,18 +242,11 @@ function updateActiveHeading(
     }
   }
 
-  let activeLink: HTMLAnchorElement | undefined;
+  const activeNavHeadingLink = syncHeadingLinkState(state.navHeadingLinks, current);
+  const activeOutlineLink = syncHeadingLinkState(state.outlineLinks, current);
 
-  Array.from(state.outlineLinks.querySelectorAll<HTMLAnchorElement>("a")).forEach((link) => {
-    const active = Boolean(current) && link.hash === `#${current?.id}`;
-    link.classList.toggle("is-active", active);
-    if (active) {
-      link.setAttribute("aria-current", "true");
-      activeLink = link;
-    } else link.removeAttribute("aria-current");
-  });
-
-  if (activeLink) scrollOutlineToActiveLink(state, activeLink, behavior);
+  if (activeNavHeadingLink) scrollNavLinkIntoView(state, activeNavHeadingLink, behavior);
+  if (activeOutlineLink) scrollOutlineToActiveLink(state, activeOutlineLink, behavior);
 }
 
 /**

@@ -779,7 +779,7 @@ nav h1 {
   color: var(--accent);
 }
 
-.nav-group a {
+.nav-group [data-doc-link] {
   display: block;
   transform: translate3d(0, 0, 0);
   margin: 1px 0;
@@ -798,19 +798,19 @@ nav h1 {
   backface-visibility: hidden;
 }
 
-.nav-group a:hover {
+.nav-group [data-doc-link]:hover {
   transform: translate3d(2px, 0, 0);
   background: var(--surface-interactive);
   border-left-color: color-mix(in srgb, var(--accent) 40%, var(--border));
   color: var(--text);
 }
 
-.nav-group a:focus-visible {
+.nav-group [data-doc-link]:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-.nav-group a.is-active {
+.nav-group [data-doc-link].is-active {
   transform: translate3d(2px, 0, 0);
   border-left-color: var(--accent);
   background: var(--surface-interactive);
@@ -834,8 +834,62 @@ nav h1 {
   -webkit-line-clamp: 2;
 }
 
-.nav-group a.is-active .nav-search-context {
+.nav-group [data-doc-link].is-active .nav-search-context {
   color: color-mix(in srgb, var(--muted) 80%, var(--text));
+}
+
+.nav-heading-links {
+  display: grid;
+  gap: 1px;
+  margin: 0.125rem 0 0.5rem 0.625rem;
+}
+
+.nav-heading-link {
+  display: block;
+  transform: translate3d(0, 0, 0);
+  border-left: 2px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background-color: transparent;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  padding: 0.25rem 0.5rem 0.25rem 0.625rem;
+  text-decoration: none;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
+  backface-visibility: hidden;
+}
+
+.nav-heading-link.depth-h2 {
+  padding-left: 0.9375rem;
+}
+
+.nav-heading-link.depth-h3 {
+  padding-left: 1.25rem;
+  font-size: 0.71875rem;
+}
+
+.nav-heading-link:hover {
+  transform: translate3d(2px, 0, 0);
+  border-left-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent);
+}
+
+.nav-heading-link.is-active {
+  transform: translate3d(2px, 0, 0);
+  border-left-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent-soft) 62%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.nav-heading-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .search-highlight {
@@ -1399,8 +1453,10 @@ main {
 
 /*WILL-CHANGE INTERACTION-SCOPED */
 
-.nav-group a:hover,
-.nav-group a:focus-visible,
+.nav-group [data-doc-link]:hover,
+.nav-group [data-doc-link]:focus-visible,
+.nav-heading-link:hover,
+.nav-heading-link:focus-visible,
 .nav-controls-handle:hover,
 .nav-controls-handle:focus-visible,
 .nav-resize-handle:hover,
@@ -1595,7 +1651,8 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   .nav-section h3,
-  .nav-group a,
+  .nav-group [data-doc-link],
+  .nav-heading-link,
   .nav-resize-handle,
   .nav-controls-handle,
   .outline-resize-handle,
@@ -1608,8 +1665,10 @@ main {
     transition: none;
   }
 
-  .nav-group a:hover,
-  .nav-group a.is-active,
+  .nav-group [data-doc-link]:hover,
+  .nav-group [data-doc-link].is-active,
+  .nav-heading-link:hover,
+  .nav-heading-link.is-active,
   .nav-section.is-active > h3,
   .nav-resize-handle:hover,
   .nav-controls-handle:hover,

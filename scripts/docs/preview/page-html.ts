@@ -90,6 +90,7 @@ ${themeBootstrapScript()}
           </button>
         </div>
         ${page.navigationHtml}
+        <div class="nav-heading-links" data-nav-heading-links role="group" aria-label="Sections in current document" hidden></div>
       </div>
       <button class="nav-resize-handle" type="button" data-nav-resize-handle aria-label="Resize navigation panel" aria-expanded="true" title="Resize navigation panel">
         <span aria-hidden="true"></span>

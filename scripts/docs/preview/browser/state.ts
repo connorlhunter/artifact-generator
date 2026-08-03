@@ -59,6 +59,7 @@ function createState(): PreviewState {
     navControlsHandle: document.querySelector<HTMLButtonElement>("[data-nav-controls-handle]"),
     navResizeHandle: document.querySelector<HTMLButtonElement>("[data-nav-resize-handle]"),
     navGroups: Array.from(document.querySelectorAll<HTMLElement>("[data-nav-group]")),
+    navHeadingLinks: document.querySelector<HTMLElement>("[data-nav-heading-links]"),
     navCount: document.querySelector<HTMLElement>("[data-nav-count]"),
     navLinks,
     navSections: Array.from(document.querySelectorAll<HTMLElement>("[data-nav-section]")),

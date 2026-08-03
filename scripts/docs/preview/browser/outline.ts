@@ -9,6 +9,10 @@ function clearActiveArticle(state: PreviewState): void {
     link.removeAttribute("aria-current");
   });
   state.navSections.forEach((section) => section.classList.remove("is-active"));
+  if (state.navHeadingLinks) {
+    state.navHeadingLinks.replaceChildren();
+    state.navHeadingLinks.hidden = true;
+  }
 }
 
 /**
@@ -26,6 +30,34 @@ function showOutlineMessage(state: PreviewState, title: string, message: string)
 }
 
 /**
+ * Builds in-document heading links beneath the active document in the left sidebar.
+ */
+function buildNavHeadingLinks(state: PreviewState, article: HTMLElement): void {
+  const links = state.navHeadingLinks;
+  if (!links) return;
+
+  links.replaceChildren();
+  links.hidden = true;
+
+  const activeDocLink = state.navLinks.find((link) => link.dataset.docId === article.id);
+  if (!activeDocLink || state.activeHeadings.length === 0) return;
+
+  activeDocLink.after(links);
+  links.setAttribute("aria-label", `Sections in ${article.dataset.docTitle || "current document"}`);
+
+  state.activeHeadings.forEach((heading) => {
+    const link = document.createElement("a");
+    link.href = `#${heading.id}`;
+    link.textContent = heading.textContent || "Section";
+    link.className = `nav-heading-link depth-${heading.tagName.toLowerCase()}`;
+    link.dataset.navHeadingLink = "";
+    links.append(link);
+  });
+
+  links.hidden = false;
+}
+
+/**
  * Builds the right-side heading outline for the active article.
  */
 function buildOutline(
@@ -33,25 +65,29 @@ function buildOutline(
   article: HTMLElement,
   behavior: ScrollBehavior = previewScrollBehavior(),
 ): void {
-  if (!state.outlineTitle || !state.outlineLinks) return;
-
-  state.outlineTitle.textContent = article.dataset.docTitle || "Current doc";
-  state.outlineLinks.replaceChildren();
   state.activeHeadings = Array.from(
     article.querySelectorAll<HTMLElement>(".doc-body h1, .doc-body h2, .doc-body h3"),
   );
+  state.activeHeadings.forEach((heading, index) => {
+    if (!heading.id) heading.id = `${article.id}-heading-${index}`;
+  });
+  buildNavHeadingLinks(state, article);
+
+  if (state.outlineTitle) {
+    state.outlineTitle.textContent = article.dataset.docTitle || "Current doc";
+  }
+  state.outlineLinks?.replaceChildren();
 
   if (state.activeHeadings.length === 0) {
     showOutlineMessage(state, article.dataset.docTitle || "Current doc", "No headings");
     return;
   }
 
-  state.activeHeadings.forEach((heading, index) => {
-    if (!heading.id) heading.id = `${article.id}-heading-${index}`;
+  state.activeHeadings.forEach((heading) => {
     const link = document.createElement("a");
     link.href = `#${heading.id}`;
     link.textContent = heading.textContent || "Section";
-    link.className = `outline-link depth-${heading.tagName.slice(1).toLowerCase()}`;
+    link.className = `outline-link depth-${heading.tagName.toLowerCase()}`;
     state.outlineLinks?.append(link);
   });
 
@@ -82,10 +118,10 @@ function scrollOutlineToActiveLink(
 }
 
 /**
- * Wires delegated outline clicks to the main docs scroll container.
+ * Wires one heading-link collection to the main docs scroll container.
  */
-function wireOutlineNavigation(state: PreviewState): void {
-  state.outlineLinks?.addEventListener(
+function wireHeadingNavigation(state: PreviewState, links: HTMLElement | null): void {
+  links?.addEventListener(
     "click",
     (event) => {
       const target = event.target instanceof Element ? event.target : null;
@@ -102,4 +138,12 @@ function wireOutlineNavigation(state: PreviewState): void {
     },
     { signal: state.signal },
   );
+}
+
+/**
+ * Wires both left and right heading navigation without duplicating click behavior.
+ */
+function wireOutlineNavigation(state: PreviewState): void {
+  wireHeadingNavigation(state, state.navHeadingLinks);
+  wireHeadingNavigation(state, state.outlineLinks);
 }

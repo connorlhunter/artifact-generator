@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { runInNewContext } from "node:vm";
 import { renderDiagramPreviewPage } from "../../scripts/docs/preview/diagram-page-html.ts";
 import {
   loadDocsPreviewClientScript,
@@ -6,6 +9,41 @@ import {
   stripSourceMapComment,
 } from "../../scripts/docs/preview/client.ts";
 import { loadDocsPreviewStyles, resolveStylesPath } from "../../scripts/docs/preview/styles.ts";
+
+interface FakeHeadingLink {
+  attributes: Map<string, string>;
+  classes: Set<string>;
+  classList: {
+    toggle(name: string, force?: boolean): boolean;
+  };
+  hash: string;
+  removeAttribute(name: string): void;
+  setAttribute(name: string, value: string): void;
+}
+
+function fakeHeadingLink(hash: string): FakeHeadingLink {
+  const attributes = new Map<string, string>();
+  const classes = new Set<string>();
+
+  return {
+    attributes,
+    classes,
+    classList: {
+      toggle(name, force) {
+        if (force) classes.add(name);
+        else classes.delete(name);
+        return classes.has(name);
+      },
+    },
+    hash,
+    removeAttribute(name) {
+      attributes.delete(name);
+    },
+    setAttribute(name, value) {
+      attributes.set(name, value);
+    },
+  };
+}
 
 describe("docs preview assets", () => {
   test("renders diagram viewer pages with project favicon links", () => {
@@ -86,6 +124,8 @@ describe("docs preview assets", () => {
       ".search-highlight",
       ".nav-search-context",
       ".nav-section.is-active > h3",
+      ".nav-heading-links",
+      ".nav-heading-link.is-active",
       ".doc.is-search-match",
       "background: var(--table-heading-bg)",
       "border: 1px solid var(--code-border)",
@@ -192,6 +232,10 @@ describe("docs preview assets", () => {
     expect(script).toContain("mainScrollAnchor");
     expect(script).toContain("isMainAtScrollEnd");
     expect(script).toContain("syncActiveNavigation");
+    expect(script).toContain("buildNavHeadingLinks");
+    expect(script).toContain("syncHeadingLinkState");
+    expect(script).toContain("navHeadingLink");
+    expect(script).toContain("state.navHeadingLinks");
     expect(script).toContain('section.classList.toggle("is-active"');
     expect(script).toContain('link.setAttribute("aria-current", "true")');
     expect(script).toContain("window.history.pushState");
@@ -228,6 +272,7 @@ describe("docs preview assets", () => {
     expect(script).toContain("createState");
     expect(script).toContain("installCleanup");
     expect(script).toContain("buildOutline");
+    expect(script).toContain("buildNavHeadingLinks");
     expect(script).toContain("requestActiveUpdate");
     expect(script).toContain("wireDocNavigation");
     expect(script).toContain("wireOutlineNavigation");
@@ -239,6 +284,138 @@ describe("docs preview assets", () => {
     expect(script).toContain("wireMobileNavResize");
     expect(script).toContain("wireDesktopOutlineResize");
     expect(script).toContain("startDocsPreviewClient");
+  });
+
+  test("moves active heading state between left navigation links", () => {
+    type SyncHeadingLinkState = (
+      links: { querySelectorAll(selector: string): FakeHeadingLink[] } | null,
+      current: { id: string } | undefined,
+    ) => FakeHeadingLink | undefined;
+
+    const context: { captured?: SyncHeadingLinkState } = {};
+    const script = readFileSync(
+      resolve(
+        resolveBrowserScriptDir(
+          new URL("../../scripts/docs/preview/client.ts", import.meta.url).href,
+        ),
+        "navigation.js",
+      ),
+      "utf8",
+    );
+    runInNewContext(`${script}\nglobalThis.captured = syncHeadingLinkState;`, context);
+
+    const first = fakeHeadingLink("#first");
+    const second = fakeHeadingLink("#second");
+    const links = { querySelectorAll: () => [first, second] };
+    const syncHeadingLinkState = context.captured;
+
+    expect(typeof syncHeadingLinkState).toBe("function");
+    expect(syncHeadingLinkState?.(links, { id: "second" })).toBe(second);
+    expect(first.classes.has("is-active")).toBe(false);
+    expect(first.attributes.has("aria-current")).toBe(false);
+    expect(second.classes.has("is-active")).toBe(true);
+    expect(second.attributes.get("aria-current")).toBe("true");
+
+    expect(syncHeadingLinkState?.(links, { id: "first" })).toBe(first);
+    expect(first.classes.has("is-active")).toBe(true);
+    expect(second.classes.has("is-active")).toBe(false);
+    expect(second.attributes.has("aria-current")).toBe(false);
+  });
+
+  test("builds active document headings beneath its left navigation link", () => {
+    interface BuiltHeadingLink {
+      className: string;
+      dataset: Record<string, string>;
+      href: string;
+      textContent: string;
+    }
+
+    interface HeadingLinksContainer {
+      append(link: BuiltHeadingLink): void;
+      children: BuiltHeadingLink[];
+      hidden: boolean;
+      replaceChildren(): void;
+      setAttribute(name: string, value: string): void;
+    }
+
+    type BuildNavHeadingLinks = (
+      state: {
+        activeHeadings: Array<{ id: string; tagName: string; textContent: string }>;
+        navHeadingLinks: HeadingLinksContainer | null;
+        navLinks: Array<{
+          after(links: HeadingLinksContainer): void;
+          dataset: { docId: string };
+        }>;
+      },
+      article: { dataset: { docTitle: string }; id: string },
+    ) => void;
+
+    const children: BuiltHeadingLink[] = [];
+    const labels = new Map<string, string>();
+    const container: HeadingLinksContainer = {
+      append(link) {
+        children.push(link);
+      },
+      children,
+      hidden: true,
+      replaceChildren() {
+        children.length = 0;
+      },
+      setAttribute(name, value) {
+        labels.set(name, value);
+      },
+    };
+    const insertion: { links?: HeadingLinksContainer } = {};
+    const context: {
+      captured?: BuildNavHeadingLinks;
+      document: { createElement(tagName: string): BuiltHeadingLink };
+    } = {
+      document: {
+        createElement: () => ({ className: "", dataset: {}, href: "", textContent: "" }),
+      },
+    };
+    const script = readFileSync(
+      resolve(
+        resolveBrowserScriptDir(
+          new URL("../../scripts/docs/preview/client.ts", import.meta.url).href,
+        ),
+        "outline.js",
+      ),
+      "utf8",
+    );
+    runInNewContext(`${script}\nglobalThis.captured = buildNavHeadingLinks;`, context);
+
+    context.captured?.(
+      {
+        activeHeadings: [
+          { id: "overview-heading-0", tagName: "H1", textContent: "Portfolio" },
+          { id: "overview-heading-1", tagName: "H2", textContent: "What This App Owns" },
+        ],
+        navHeadingLinks: container,
+        navLinks: [
+          {
+            after(links) {
+              insertion.links = links;
+            },
+            dataset: { docId: "overview" },
+          },
+        ],
+      },
+      { dataset: { docTitle: "Overview" }, id: "overview" },
+    );
+
+    expect(insertion.links).toBe(container);
+    expect(container.hidden).toBe(false);
+    expect(labels.get("aria-label")).toBe("Sections in Overview");
+    expect(children.map((link) => link.href)).toEqual([
+      "#overview-heading-0",
+      "#overview-heading-1",
+    ]);
+    expect(children.map((link) => link.className)).toEqual([
+      "nav-heading-link depth-h1",
+      "nav-heading-link depth-h2",
+    ]);
+    expect(children.every((link) => link.dataset.navHeadingLink === "")).toBe(true);
   });
 
   test("resolves and sanitizes compiled browser script assets", () => {
