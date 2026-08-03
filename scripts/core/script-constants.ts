@@ -33,7 +33,6 @@ export const sourceInputDirs = {
   manifests: join(sourceInputRoot, "artifacts", "manifests"),
   profile: join(sourceInputRoot, "artifacts", "profile"),
   projects: join(sourceInputRoot, "artifacts", "projects"),
-  assets: join(sourceInputRoot, "assets", "assets"),
   icons: join(sourceInputRoot, "assets", repoDirs.icons),
 } as const;
 

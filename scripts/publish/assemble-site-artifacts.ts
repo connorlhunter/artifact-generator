@@ -239,7 +239,7 @@ export function copyProjectContent(): number {
 }
 
 /**
- * Copies shared content and static assets into publish bundle directories.
+ * Copies shared content and generated assets into publish bundle directories.
  */
 export function copySharedPublishInputs(): void {
   const plans: CopyPlan[] = [
@@ -256,22 +256,10 @@ export function copySharedPublishInputs(): void {
       target: join(publishOutputs.siteArtifacts, "profile"),
     },
     {
-      label: "Coverage report",
-      required: isFile(artifactPaths.coverageReport),
-      source: repoDirs.coverage,
-      target: join(publishOutputs.siteArtifacts, repoDirs.coverage),
-    },
-    {
       label: "Artifact Generator project coverage report",
       required: isFile(artifactPaths.coverageReport),
       source: repoDirs.coverage,
       target: join(publishOutputs.siteArtifacts, "projects", defaultDocsProject, repoDirs.coverage),
-    },
-    {
-      label: "Static assets",
-      required: false,
-      source: sourceInputDirs.assets,
-      target: join(publishOutputs.siteAssets, "assets"),
     },
     {
       label: "Project icons",
@@ -309,7 +297,7 @@ export function assembleSiteArtifacts(options: AssembleSiteArtifactsOptions = {}
   validateSourceInputSelection();
   cleanPublishOutputs();
 
-  logHeading("Assembling site artifact bundle", { count: 10 });
+  logHeading("Assembling site artifact bundle", { count: 8 });
 
   const diagramCount = copyRenderedDiagrams();
   logItem(`Rendered diagrams: ${diagramCount}`, 1);

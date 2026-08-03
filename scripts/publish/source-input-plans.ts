@@ -49,12 +49,6 @@ const sourceInputDefinitions: ReadonlyArray<SourceInputDefinition> = [
     target: sourceInputDirs.projects,
   },
   {
-    label: "Asset source",
-    sourceFolder: "assets",
-    storage: "assets",
-    target: sourceInputDirs.assets,
-  },
-  {
     label: "Icon source",
     sourceFolder: repoDirs.icons,
     storage: "assets",

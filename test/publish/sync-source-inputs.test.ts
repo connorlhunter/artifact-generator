@@ -22,7 +22,6 @@ describe("sync source inputs", () => {
       ["Manifest source", "artifact-source", "manifests"],
       ["Profile source", "artifact-source", "profile"],
       ["Project source", "artifact-source", "projects"],
-      ["Asset source", "asset-source", "assets"],
       ["Icon source", "asset-source", "icons"],
     ]);
   });
@@ -47,7 +46,7 @@ describe("sync source inputs", () => {
       },
     });
 
-    expect(commands).toHaveLength(7);
+    expect(commands).toHaveLength(6);
     expect(commands[0]).toEqual({
       args: [
         "s3",

@@ -85,8 +85,7 @@ describe("assemble site artifacts", () => {
     expect(existsSync("dist/site-artifacts/projects/example.md")).toBe(true);
     expect(existsSync("dist/site-artifacts/projects/.local-metadata")).toBe(false);
     expect(existsSync("dist/site-artifacts/projects/example/coverage/index.html")).toBe(false);
-    expect(existsSync("dist/site-artifacts/coverage/index.html")).toBe(true);
-    expect(existsSync("dist/site-artifacts/coverage/index.pdf")).toBe(true);
+    expect(existsSync("dist/site-artifacts/coverage")).toBe(false);
     expect(existsSync("dist/site-artifacts/projects/artifact-generator/coverage/index.html")).toBe(
       true,
     );
