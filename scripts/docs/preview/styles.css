@@ -763,10 +763,20 @@ nav h1 {
 }
 
 .nav-section h3 {
+  transform: translate3d(0, 0, 0);
   margin: 0.625rem 0 0.25rem;
   color: var(--text);
   font-size: 0.8125rem;
   font-weight: 700;
+  transition:
+    color var(--motion-fast),
+    transform var(--motion-fast);
+  backface-visibility: hidden;
+}
+
+.nav-section.is-active > h3 {
+  transform: translate3d(2px, 0, 0);
+  color: var(--accent);
 }
 
 .nav-group a {
@@ -801,6 +811,7 @@ nav h1 {
 }
 
 .nav-group a.is-active {
+  transform: translate3d(2px, 0, 0);
   border-left-color: var(--accent);
   background: var(--surface-interactive);
   color: var(--text);
@@ -1337,13 +1348,18 @@ main {
   display: block;
   transform: translate3d(0, 0, 0);
   border-left: 2px solid var(--border);
+  background-color: transparent;
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
   padding: 0.3125rem 0 0.3125rem 0.625rem;
   text-decoration: none;
-  transition: transform var(--motion-fast);
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
   backface-visibility: hidden;
 }
 
@@ -1366,7 +1382,7 @@ main {
   transform: translate3d(2px, 0, 0);
   border-left-color: var(--accent);
   color: var(--accent);
-  background: linear-gradient(to right, var(--accent-soft), transparent 80%);
+  background-color: color-mix(in srgb, var(--accent-soft) 62%, transparent);
   font-weight: 600;
 }
 
@@ -1578,6 +1594,7 @@ main {
 /*REDUCED MOTION*/
 
 @media (prefers-reduced-motion: reduce) {
+  .nav-section h3,
   .nav-group a,
   .nav-resize-handle,
   .nav-controls-handle,
@@ -1592,6 +1609,8 @@ main {
   }
 
   .nav-group a:hover,
+  .nav-group a.is-active,
+  .nav-section.is-active > h3,
   .nav-resize-handle:hover,
   .nav-controls-handle:hover,
   .outline-resize-handle:hover,
