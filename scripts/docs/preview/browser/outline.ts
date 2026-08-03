@@ -8,6 +8,7 @@ function clearActiveArticle(state: PreviewState): void {
     link.classList.remove("is-active");
     link.removeAttribute("aria-current");
   });
+  state.navSections.forEach((section) => section.classList.remove("is-active"));
 }
 
 /**

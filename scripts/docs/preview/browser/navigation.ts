@@ -3,11 +3,82 @@ interface ActiveArticleOptions {
   outlineBehavior?: ScrollBehavior;
 }
 
+const articleActivationOffset = 180;
+const headingActivationOffset = 130;
+const scrollEndTolerance = 2;
+
 /**
  * Returns documents that are currently visible after filtering.
  */
 function visibleArticles(state: PreviewState): HTMLElement[] {
   return state.articles.filter((article) => !article.hidden);
+}
+
+/**
+ * Returns the top edge of the visible reading area inside the main pane.
+ */
+function mainReadingTop(state: PreviewState): number {
+  if (!state.main) return 0;
+
+  const mainRect = state.main.getBoundingClientRect();
+  const nav = state.docNav;
+  if (!nav || nav.classList.contains("is-nav-collapsed")) return mainRect.top;
+
+  const navRect = nav.getBoundingClientRect();
+  const horizontalOverlap =
+    Math.min(navRect.right, mainRect.right) - Math.max(navRect.left, mainRect.left);
+  if (horizontalOverlap <= 1 || navRect.bottom <= mainRect.top) return mainRect.top;
+
+  return Math.min(mainRect.bottom, Math.max(mainRect.top, navRect.bottom));
+}
+
+/**
+ * Places a stable activation line inside the currently visible reading area.
+ */
+function mainScrollAnchor(state: PreviewState, preferredOffset: number): number {
+  if (!state.main) return preferredOffset;
+
+  const mainRect = state.main.getBoundingClientRect();
+  const readingTop = mainReadingTop(state);
+  const visibleHeight = Math.max(0, mainRect.bottom - readingTop);
+  const offset = Math.min(preferredOffset, visibleHeight * 0.35);
+
+  return readingTop + offset;
+}
+
+/**
+ * Returns whether the main reading surface is at its final scroll position.
+ */
+function isMainAtScrollEnd(state: PreviewState): boolean {
+  if (state.main) {
+    const maxScrollTop = state.main.scrollHeight - state.main.clientHeight;
+    return (
+      maxScrollTop > scrollEndTolerance && state.main.scrollTop >= maxScrollTop - scrollEndTolerance
+    );
+  }
+
+  const maxScrollY = document.documentElement.scrollHeight - window.innerHeight;
+  return maxScrollY > scrollEndTolerance && window.scrollY >= maxScrollY - scrollEndTolerance;
+}
+
+/**
+ * Keeps document and section navigation states in sync.
+ */
+function syncActiveNavigation(state: PreviewState, id: string): void {
+  let activeSection: HTMLElement | null = null;
+
+  state.navLinks.forEach((link) => {
+    const active = link.dataset.docId === id;
+    link.classList.toggle("is-active", active);
+    if (active) {
+      link.setAttribute("aria-current", "true");
+      activeSection = link.closest<HTMLElement>("[data-nav-section]");
+    } else link.removeAttribute("aria-current");
+  });
+
+  state.navSections.forEach((section) => {
+    section.classList.toggle("is-active", section === activeSection);
+  });
 }
 
 /**
@@ -21,12 +92,7 @@ function setActiveArticle(
   const article = state.articleById.get(id);
   if (!article || article.hidden) return;
 
-  state.navLinks.forEach((link) => {
-    const active = link.dataset.docId === id;
-    link.classList.toggle("is-active", active);
-    if (active) link.setAttribute("aria-current", "true");
-    else link.removeAttribute("aria-current");
-  });
+  syncActiveNavigation(state, id);
 
   if (state.activeArticleId !== id) {
     state.activeArticleId = id;
@@ -94,10 +160,13 @@ function jumpMainToArticle(
  */
 function currentArticle(state: PreviewState): HTMLElement | undefined {
   const visible = visibleArticles(state);
+  if (isMainAtScrollEnd(state)) return visible.at(-1);
+
+  const activationLine = mainScrollAnchor(state, articleActivationOffset);
   let current = visible[0];
 
   for (const article of visible) {
-    if (article.getBoundingClientRect().top <= 180) current = article;
+    if (article.getBoundingClientRect().top <= activationLine) current = article;
     else break;
   }
 
@@ -109,7 +178,7 @@ function currentArticle(state: PreviewState): HTMLElement | undefined {
  */
 function updateActiveArticle(state: PreviewState): void {
   const article = currentArticle(state);
-  if (article) setActiveArticle(state, article.id, { navBehavior: "auto" });
+  if (article) setActiveArticle(state, article.id);
   state.pendingFrame = 0;
 }
 
@@ -144,10 +213,14 @@ function updateActiveHeading(
 ): void {
   if (!state.outlineLinks) return;
 
-  let current = state.activeHeadings[0];
-  for (const heading of state.activeHeadings) {
-    if (heading.getBoundingClientRect().top <= 130) current = heading;
-    else break;
+  const atScrollEnd = isMainAtScrollEnd(state);
+  let current = atScrollEnd ? state.activeHeadings.at(-1) : state.activeHeadings[0];
+  if (!atScrollEnd) {
+    const activationLine = mainScrollAnchor(state, headingActivationOffset);
+    for (const heading of state.activeHeadings) {
+      if (heading.getBoundingClientRect().top <= activationLine) current = heading;
+      else break;
+    }
   }
 
   let activeLink: HTMLAnchorElement | undefined;
@@ -155,7 +228,10 @@ function updateActiveHeading(
   Array.from(state.outlineLinks.querySelectorAll<HTMLAnchorElement>("a")).forEach((link) => {
     const active = Boolean(current) && link.hash === `#${current?.id}`;
     link.classList.toggle("is-active", active);
-    if (active) activeLink = link;
+    if (active) {
+      link.setAttribute("aria-current", "true");
+      activeLink = link;
+    } else link.removeAttribute("aria-current");
   });
 
   if (activeLink) scrollOutlineToActiveLink(state, activeLink, behavior);
@@ -169,7 +245,7 @@ function requestActiveUpdate(state: PreviewState): void {
   state.pendingFrame = window.requestAnimationFrame(() => {
     state.pendingFrame = 0;
     updateActiveArticle(state);
-    updateActiveHeading(state, "auto");
+    updateActiveHeading(state);
   });
 }
 

@@ -86,6 +86,7 @@ describe("render docs preview", () => {
     expect(html).toContain("data-doc-link");
     expect(html).toContain("data-doc-link-label");
     expect(html).toContain("data-doc-search-context");
+    expect(html).toContain("data-nav-section");
     expect(html).toContain("is-active");
     expect(html).toContain('class="project-icon title-project-icon"');
     expect(html).toContain("activeArticleId");
@@ -131,6 +132,10 @@ describe("render docs preview", () => {
     expect(html).toContain("previewScrollBehavior");
     expect(html).toContain("scrollContainerTo");
     expect(html).toContain("scrollTargetIntoContainer");
+    expect(html).toContain("mainReadingTop");
+    expect(html).toContain("mainScrollAnchor");
+    expect(html).toContain("isMainAtScrollEnd");
+    expect(html).toContain("syncActiveNavigation");
     expect(html).toContain("prefers-reduced-motion: reduce");
     expect(html).toContain("magneticPosition");
     expect(html).toContain("wireDocNavigation");

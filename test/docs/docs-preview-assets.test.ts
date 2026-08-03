@@ -85,6 +85,7 @@ describe("docs preview assets", () => {
       "::selection",
       ".search-highlight",
       ".nav-search-context",
+      ".nav-section.is-active > h3",
       ".doc.is-search-match",
       "background: var(--table-heading-bg)",
       "border: 1px solid var(--code-border)",
@@ -187,6 +188,12 @@ describe("docs preview assets", () => {
     expect(script).toContain("wireOutlineNavigation");
     expect(script).toContain("previewScrollBehavior");
     expect(script).toContain("scrollTargetIntoContainer");
+    expect(script).toContain("mainReadingTop");
+    expect(script).toContain("mainScrollAnchor");
+    expect(script).toContain("isMainAtScrollEnd");
+    expect(script).toContain("syncActiveNavigation");
+    expect(script).toContain('section.classList.toggle("is-active"');
+    expect(script).toContain('link.setAttribute("aria-current", "true")');
     expect(script).toContain("window.history.pushState");
     expect(script).toContain("activateHashTarget");
     expect(script).toContain("setPointerCapture");
