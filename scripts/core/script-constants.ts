@@ -42,8 +42,7 @@ export const sourceInputDirs = {
  */
 export const repoFiles = {
   bunfig: "bunfig.toml",
-  dependencyPins: "dependency-pins.json",
-  dependencyReleaseAgeExcludes: "dependency-release-age-excludes.json",
+  dependencyPolicy: "dependency-policy.toml",
   diagramDirections: "diagram-directions.md",
   diagramStyleKeyDoc: "diagram-style-key.md",
   packageJson: "package.json",

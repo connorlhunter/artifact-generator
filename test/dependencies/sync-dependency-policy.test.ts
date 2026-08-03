@@ -71,29 +71,14 @@ describe("dependency policy sync", () => {
       writeFileSync("package.json", `${JSON.stringify({ name: "docs" }, null, 2)}\n`);
       writeFileSync("bunfig.toml", "[install]\nminimumReleaseAge = 604800\n");
       writeFileSync(
-        "dependency-pins.json",
-        `${JSON.stringify(
-          {
-            ws: {
-              reason: "Fix high-severity advisory.",
-              version: "8.17.1",
-            },
-          },
-          null,
-          2,
-        )}\n`,
-      );
-      writeFileSync(
-        "dependency-release-age-excludes.json",
-        `${JSON.stringify(
-          {
-            mermaid: {
-              reason: "Security fix cannot wait for the one-week age window.",
-            },
-          },
-          null,
-          2,
-        )}\n`,
+        "dependency-policy.toml",
+        `[pins.ws]
+version = "8.17.1"
+reason = "Fix high-severity advisory."
+
+[releaseAgeExcludes.mermaid]
+reason = "Security fix cannot wait for the one-week age window."
+`,
       );
 
       await expect(syncDependencyPolicy(true)).rejects.toThrow("Dependency policy is out of sync");

@@ -1,0 +1,29 @@
+[pins."brace-expansion"]
+version = "5.0.8"
+reason = "Fix high-severity expansion DoS vulnerabilities pulled through ESLint and typescript-eslint minimatch chains."
+
+[pins."js-yaml"]
+version = "4.3.0"
+reason = "Fix high-severity YAML merge-key CPU exhaustion pulled through Puppeteer cosmiconfig."
+
+[pins.postcss]
+version = "8.5.23"
+reason = "Fix high-severity source-map path traversal pulled through Mermaid ZenUML styling dependencies."
+
+[pins."string-width"]
+version = "4.2.3"
+reason = "Keep Mermaid CLI Puppeteer yargs on a CommonJS-compatible string-width version so diagram rendering works on Node."
+
+[pins."tar-fs"]
+version = "2.1.4"
+reason = "Fix high-severity vulnerabilities pulled through the Mermaid CLI Puppeteer dependency chain."
+
+[pins.ws]
+version = "8.21.0"
+reason = "Fix a high-severity DoS vulnerability pulled through the Mermaid CLI Puppeteer dependency chain."
+
+[releaseAgeExcludes."brace-expansion"]
+reason = "Allow the patched expansion DoS fix before the normal release-age gate; remove this after it ages past one week."
+
+[releaseAgeExcludes.postcss]
+reason = "Allow the patched source-map path traversal fix before the normal release-age gate; remove this after it ages past one week."

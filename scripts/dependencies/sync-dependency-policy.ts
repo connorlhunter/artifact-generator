@@ -1,3 +1,4 @@
+import { TOML } from "bun";
 import { readText, writeText } from "../core/bun-native-fs.ts";
 import { repoFiles } from "../core/script-constants.ts";
 import { logCaughtError, logSuccess } from "../core/script-logger.ts";
@@ -5,8 +6,7 @@ import { isEntrypoint } from "../core/script-entry.ts";
 
 const packageJsonPath = repoFiles.packageJson;
 const bunfigPath = repoFiles.bunfig;
-const dependencyPinsPath = repoFiles.dependencyPins;
-const releaseAgeExcludesPath = repoFiles.dependencyReleaseAgeExcludes;
+const dependencyPolicyPath = repoFiles.dependencyPolicy;
 
 /**
  * One exact package override managed by dependency policy.
@@ -37,7 +37,7 @@ export interface ReleaseAgeExclude {
  */
 export interface PackageJson {
   /**
-   * Package-manager overrides generated from `dependency-pins.json`.
+   * Package-manager overrides generated from `dependency-policy.toml`.
    */
   overrides?: Record<string, string>;
   [key: string]: unknown;
@@ -54,26 +54,35 @@ export type DependencyPins = Record<string, DependencyPin>;
 export type ReleaseAgeExcludes = Record<string, ReleaseAgeExclude>;
 
 /**
+ * Reviewed dependency policy loaded from TOML.
+ */
+export interface DependencyPolicy {
+  /**
+   * Exact package overrides.
+   */
+  pins: DependencyPins;
+  /**
+   * Packages allowed to bypass the minimum release age temporarily.
+   */
+  releaseAgeExcludes: ReleaseAgeExcludes;
+}
+
+/**
  * Syncs dependency policy files into the package manager config files.
  *
- * `dependency-pins.json` is the reviewed source for `package.json` overrides.
- * `dependency-release-age-excludes.json` is the reviewed source for Bun
- * `minimumReleaseAgeExcludes`.
+ * `dependency-policy.toml` is the reviewed source for `package.json` overrides
+ * and Bun `minimumReleaseAgeExcludes`.
  *
  * @param {boolean} checkOnly - When true, report drift without writing files.
  * @returns {Promise<boolean>} Whether any managed file needed changes.
  */
 export async function syncDependencyPolicy(checkOnly = false): Promise<boolean> {
-  const pins = parseJson<DependencyPins>(await readText(dependencyPinsPath), dependencyPinsPath);
-  const excludes = parseJson<ReleaseAgeExcludes>(
-    await readText(releaseAgeExcludesPath),
-    releaseAgeExcludesPath,
-  );
+  const policy = TOML.parse(await readText(dependencyPolicyPath)) as unknown as DependencyPolicy;
 
   const packageJson = await readText(packageJsonPath);
   const bunfig = await readText(bunfigPath);
-  const nextPackageJson = applyPinnedOverrides(packageJson, pins);
-  const nextBunfig = applyReleaseAgeExcludes(bunfig, Object.keys(excludes).sort());
+  const nextPackageJson = applyPinnedOverrides(packageJson, policy.pins);
+  const nextBunfig = applyReleaseAgeExcludes(bunfig, Object.keys(policy.releaseAgeExcludes).sort());
   const changedPaths: string[] = [];
 
   if (nextPackageJson !== packageJson) changedPaths.push(packageJsonPath);

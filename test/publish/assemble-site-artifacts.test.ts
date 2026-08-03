@@ -69,7 +69,7 @@ describe("assemble site artifacts", () => {
     );
     expect(
       JSON.parse(readFileSync("dist/site-artifacts/manifests/project-artifacts.json", "utf8")) as {
-        projects: { example: { docsPdfPath: string } };
+        projects: { example: { docsPath: string; docsPdfPath: string } };
       },
     ).toEqual({
       projects: {
