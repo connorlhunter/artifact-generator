@@ -27,10 +27,8 @@ describe("script constants", () => {
     expect(artifactPaths.docsPreviewPdf).toBe("dist/docs-preview/index.pdf");
     expect(artifactPaths.coverageReport).toBe("coverage/index.html");
     expect(artifactPaths.coverageReportPdf).toBe("coverage/index.pdf");
-    expect(artifactPaths.resumeBuildPdf).toBe(
-      "resume/build/connor-hunter-resume/connor-hunter-resume.pdf",
-    );
-    expect(artifactPaths.resumeConfig).toBe("resume/Tectonic.toml");
+    expect(sourceInputDirs.resume).toBe(`${sourceInputDirs.artifacts}/resume`);
+    expect(artifactPaths.resumeBuildDir).toBe("dist/.resume-build");
     expect(artifactPaths.resumePdf).toBe("dist/resume/connor-hunter-resume.pdf");
     expect(sharedDiagramInputs).toEqual([`${sourceInputDirs.diagrams}/diagram-style-key.mmd`]);
   });

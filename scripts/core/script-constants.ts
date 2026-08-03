@@ -33,6 +33,7 @@ export const sourceInputDirs = {
   manifests: join(sourceInputRoot, "artifacts", "manifests"),
   profile: join(sourceInputRoot, "artifacts", "profile"),
   projects: join(sourceInputRoot, "artifacts", "projects"),
+  resume: join(sourceInputRoot, "artifacts", repoDirs.resume),
   icons: join(sourceInputRoot, "assets", repoDirs.icons),
 } as const;
 
@@ -58,13 +59,7 @@ export const artifactPaths = {
   coverageReportPdf: join(repoDirs.coverage, "index.pdf"),
   docsPreview: join(repoDirs.dist, "docs-preview", "index.html"),
   docsPreviewPdf: join(repoDirs.dist, "docs-preview", "index.pdf"),
-  resumeBuildPdf: join(
-    repoDirs.resume,
-    "build",
-    "connor-hunter-resume",
-    "connor-hunter-resume.pdf",
-  ),
-  resumeConfig: join(repoDirs.resume, "Tectonic.toml"),
+  resumeBuildDir: join(repoDirs.dist, ".resume-build"),
   resumePdf: join(repoDirs.dist, repoDirs.resume, "connor-hunter-resume.pdf"),
 } as const;
 

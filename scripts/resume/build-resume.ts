@@ -1,8 +1,9 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname } from "node:path";
+import { cpSync, existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { TOML } from "bun";
 import type { CommandContext, CommandOptions, CommandOutput } from "../core/command-types.ts";
 import { copyFile, ensureDirectory, removePath } from "../core/bun-native-fs.ts";
-import { artifactPaths, executables, repoDirs } from "../core/script-constants.ts";
+import { artifactPaths, executables, sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logCaughtError, logHeading, logSuccess } from "../core/script-logger.ts";
 import { runCommand } from "../core/process-utils.ts";
@@ -18,10 +19,57 @@ type CommandRunner = (
  * Configurable paths and process runner used by resume builds and tests.
  */
 export interface BuildResumeOptions {
+  readonly buildDirectory?: string;
   readonly generatedPdf?: string;
   readonly outputPdf?: string;
-  readonly projectDirectory?: string;
   readonly runner?: CommandRunner;
+  readonly sourceDirectory?: string;
+}
+
+interface TectonicProjectConfig {
+  readonly doc?: {
+    readonly name?: unknown;
+  };
+  readonly output?: ReadonlyArray<{
+    readonly name?: unknown;
+    readonly type?: unknown;
+  }>;
+}
+
+interface ResumeProjectConfig {
+  readonly documentName: string;
+  readonly outputName: string;
+}
+
+/**
+ * Reads the document and PDF output names from a resume Tectonic project.
+ *
+ * @param sourceDirectory - Selected resume source directory.
+ * @returns Names used by Tectonic's generated PDF path.
+ */
+export function readResumeProjectConfig(sourceDirectory: string): ResumeProjectConfig {
+  if (!existsSync(sourceDirectory) || !statSync(sourceDirectory).isDirectory()) {
+    throw new Error(`Missing resume source directory: ${sourceDirectory}`);
+  }
+
+  const configPath = join(sourceDirectory, "Tectonic.toml");
+  if (!existsSync(configPath) || !statSync(configPath).isFile()) {
+    throw new Error(`Missing resume source config: ${configPath}`);
+  }
+
+  const config = TOML.parse(readFileSync(configPath, "utf8")) as unknown as TectonicProjectConfig;
+  const documentName = nonEmptyString(config.doc?.name);
+  const pdfOutput = config.output?.find((output) => output.type === "pdf");
+  const outputName = nonEmptyString(pdfOutput?.name);
+
+  if (!documentName) {
+    throw new Error(`Resume source config must define doc.name: ${configPath}`);
+  }
+  if (!outputName) {
+    throw new Error(`Resume source config must define a named PDF output: ${configPath}`);
+  }
+
+  return { documentName, outputName };
 }
 
 /**
@@ -44,34 +92,59 @@ export function validateResumePdf(path: string): void {
 }
 
 /**
- * Compiles the tracked LaTeX resume and copies the PDF into generated outputs.
+ * Compiles the selected LaTeX resume and copies the PDF into generated outputs.
  *
  * @param options - Optional paths and runner for tests.
  * @returns Generated resume PDF path.
  */
 export async function buildResume(options: BuildResumeOptions = {}): Promise<string> {
-  const generatedPdf = options.generatedPdf ?? artifactPaths.resumeBuildPdf;
+  const sourceDirectory = options.sourceDirectory ?? sourceInputDirs.resume;
+  const buildDirectory = options.buildDirectory ?? artifactPaths.resumeBuildDir;
   const outputPdf = options.outputPdf ?? artifactPaths.resumePdf;
-  const projectDirectory = options.projectDirectory ?? repoDirs.resume;
   const runner = options.runner ?? runCommand;
+  const project = readResumeProjectConfig(sourceDirectory);
 
-  await removePath(dirname(generatedPdf));
+  if (resolve(sourceDirectory) === resolve(buildDirectory)) {
+    throw new Error("Resume build directory must be separate from the selected source directory.");
+  }
+
+  const generatedPdf =
+    options.generatedPdf ??
+    join(buildDirectory, "build", project.documentName, `${project.outputName}.pdf`);
+
+  await removePath(buildDirectory);
   await removePath(outputPdf);
+  cpSync(sourceDirectory, buildDirectory, {
+    dereference: true,
+    filter: (path) => {
+      const sourceRelativePath = relative(sourceDirectory, path);
+      return sourceRelativePath === "" || sourceRelativePath.split(sep)[0] !== "build";
+    },
+    recursive: true,
+  });
 
   logHeading("Building resume PDF");
-  await runner(
-    executables.tectonic,
-    ["-X", "build", "--untrusted", "--keep-logs"],
-    { input: artifactPaths.resumeConfig, output: outputPdf },
-    { cwd: projectDirectory },
-  );
+  try {
+    await runner(
+      executables.tectonic,
+      ["-X", "build", "--untrusted", "--keep-logs"],
+      { input: join(buildDirectory, "Tectonic.toml"), output: outputPdf },
+      { cwd: buildDirectory },
+    );
 
-  validateResumePdf(generatedPdf);
-  ensureDirectory(dirname(outputPdf));
-  await copyFile(generatedPdf, outputPdf);
-  logSuccess(`Built resume: ${outputPdf}`);
+    validateResumePdf(generatedPdf);
+    ensureDirectory(dirname(outputPdf));
+    await copyFile(generatedPdf, outputPdf);
+    logSuccess(`Built resume: ${outputPdf}`);
+  } finally {
+    await removePath(buildDirectory);
+  }
 
   return outputPdf;
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 /* istanbul ignore next */

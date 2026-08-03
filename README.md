@@ -25,7 +25,7 @@ bun run verify
 5. Run `bun run verify`.
 6. Run `bun run artifacts:ship` to rebuild and publish the generated bundles.
 
-`artifacts:ship` does not publish the editable S3 source inputs. Run `artifacts:source:publish` first when docs, diagrams, metadata, or icons changed. Resume source is tracked in `resume/` and compiled during the artifact build.
+`artifacts:ship` does not publish editable source inputs. Run `artifacts:source:publish` first when docs, diagrams, metadata, resume source, or icons change. The selected resume source is staged under `dist/` and compiled during the artifact build.
 
 ## Source Inputs
 
@@ -35,6 +35,7 @@ bun run verify
 <source-root>/artifacts/manifests/ Portfolio content and artifact manifests
 <source-root>/artifacts/profile/   Profile page content
 <source-root>/artifacts/projects/  Project content and artifact links
+<source-root>/artifacts/resume/    Tectonic project and LaTeX resume source
 <source-root>/assets/icons/        Project icon packs
 ```
 
@@ -47,6 +48,7 @@ Pass one explicit `local=<path>` argument to read a different bundle without syn
 ```bash
 bun run docs:render:open -- artifact-generator local=/absolute/path/to/source-inputs
 bun run diagrams:render -- connor-hunter local=/absolute/path/to/source-inputs
+bun run resume:build -- local=/absolute/path/to/source-inputs
 bun run artifacts:build -- local=/absolute/path/to/source-inputs
 bun run artifacts:ship -- local=/absolute/path/to/source-inputs
 ```
@@ -105,12 +107,11 @@ scripts/coverage/     LCOV parsing and HTML/PDF reports
 scripts/dependencies/ dependency policy sync
 scripts/git-hooks/    local Git hook setup
 scripts/publish/      source sync and generated bundle publishing
-scripts/resume/       tracked LaTeX resume compilation
-resume/               Tectonic project and resume source
+scripts/resume/       selected LaTeX resume compilation
 test/                 tests arranged to mirror the script folders
 ```
 
-The project uses Bun for installs, scripts, and tests. TypeScript is compiled with `tsgo`. Generated docs PDFs use Puppeteer and honor `PUPPETEER_EXECUTABLE_PATH` when it is set. The resume uses Tectonic's project model and pinned bundle from `resume/Tectonic.toml`.
+The project uses Bun for installs, scripts, and tests. TypeScript is compiled with `tsgo`. Generated docs PDFs use Puppeteer and honor `PUPPETEER_EXECUTABLE_PATH` when it is set. Resume builds read `artifacts/resume/Tectonic.toml` from the selected local or S3-backed source bundle and compile a staged copy with Tectonic.
 
 ## Quality Checks
 

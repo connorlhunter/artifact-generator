@@ -11,7 +11,7 @@ The test suite covers the repository-owned TypeScript scripts for docs previews,
 - `dependencies/*.test.ts`: tests for dependency policy syncing.
 - `git-hooks/*.test.ts`: tests for committed hook path setup.
 - `publish/*.test.ts`: tests for CloudFront-ready artifact bundle assembly and S3 publish configuration.
-- `resume/*.test.ts`: tests for Tectonic command execution and generated PDF validation.
+- `resume/*.test.ts`: tests for selected Tectonic source staging, command execution, and generated PDF validation.
 - `resources/docs.constants.ts`: shared fixture paths and command fixtures.
 - `resources/docs.mock.ts`: typed mock records used by multiple tests.
 - `resources/repo-fixture/`: small repository tree for docs preview tests.
