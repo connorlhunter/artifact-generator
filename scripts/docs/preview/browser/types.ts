@@ -28,6 +28,7 @@ interface PreviewState {
   navControlsHandle: HTMLButtonElement | null;
   navResizeHandle: HTMLButtonElement | null;
   navGroups: HTMLElement[];
+  navHeadingLinks: HTMLElement | null;
   navCount: HTMLElement | null;
   navLinks: HTMLAnchorElement[];
   navSections: HTMLElement[];
