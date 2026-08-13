@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
@@ -248,6 +248,41 @@ describe("render docs preview", () => {
     expect(html).not.toContain(sourceInputRoot);
     expect(html).not.toContain("artifact-generator-source-cache");
     expect(html).not.toContain("var/folders");
+  });
+
+  test("renders Markdown without executable HTML or unsafe destinations", async () => {
+    spyOn(console, "log").mockImplementation(() => undefined);
+    const source = `${sourceInputDirs.docs}/cipher/security.md`;
+    mkdirSync(dirname(source), { recursive: true });
+    writeFileSync(
+      source,
+      [
+        "# Security",
+        "",
+        '<img src="x" onerror="alert(1)">',
+        "",
+        "[Unsafe](javascript:alert(1))",
+        "",
+        "![Unsafe image](javascript:alert(1))",
+        "",
+        "[Encoded unsafe](javascript&colon;alert(1))",
+        "",
+        "[Safe](https://example.com)",
+      ].join("\n"),
+    );
+
+    await renderDocsPreview(["cipher"]);
+    const html = readFileSync(docsPreviewOutput, "utf8");
+    const renderedBody = html.match(/<div class="doc-body">([\s\S]*?)<\/div>/u)?.[1] ?? "";
+
+    expect(renderedBody).not.toContain("<img");
+    expect(renderedBody).not.toContain("javascript:");
+    expect(renderedBody).not.toContain("javascript&colon;");
+    expect(renderedBody).toContain("&lt;img");
+    expect(renderedBody).toContain("Unsafe");
+    expect(renderedBody).toContain(
+      '<a target="_blank" rel="noopener" href="https://example.com">Safe</a>',
+    );
   });
 
   test("exits when no markdown docs are available", async () => {

@@ -1,7 +1,7 @@
 [install]
 # Require packages to be at least one week old to reduce exposure to fresh supply chain attacks.
 minimumReleaseAge = 604800
-minimumReleaseAgeExcludes = ["brace-expansion","postcss"]
+minimumReleaseAgeExcludes = ["nanoid"]
 
 [test]
 pathIgnorePatterns = ["coverage/**", "dist/**", "node_modules/**"]

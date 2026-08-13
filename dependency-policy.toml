@@ -1,10 +1,14 @@
 [pins."brace-expansion"]
-version = "5.0.8"
+version = "5.0.9"
 reason = "Fix high-severity expansion DoS vulnerabilities pulled through ESLint and typescript-eslint minimatch chains."
 
 [pins."js-yaml"]
-version = "4.3.0"
+version = "4.3.1"
 reason = "Fix high-severity YAML merge-key CPU exhaustion pulled through Puppeteer cosmiconfig."
+
+[pins.nanoid]
+version = "3.3.18"
+reason = "Fix a high-severity infinite-loop vulnerability pulled through PostCSS."
 
 [pins.postcss]
 version = "8.5.23"
@@ -22,8 +26,5 @@ reason = "Fix high-severity vulnerabilities pulled through the Mermaid CLI Puppe
 version = "8.21.0"
 reason = "Fix a high-severity DoS vulnerability pulled through the Mermaid CLI Puppeteer dependency chain."
 
-[releaseAgeExcludes."brace-expansion"]
-reason = "Allow the patched expansion DoS fix before the normal release-age gate; remove this after it ages past one week."
-
-[releaseAgeExcludes.postcss]
-reason = "Allow the patched source-map path traversal fix before the normal release-age gate; remove this after it ages past one week."
+[releaseAgeExcludes.nanoid]
+reason = "Allow the patched infinite-loop fix before the normal release-age gate; remove this after it ages past one week."

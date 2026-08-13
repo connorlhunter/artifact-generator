@@ -111,6 +111,38 @@ describe("publish source inputs", () => {
     expect(commands).toEqual([]);
   });
 
+  test("does not treat hidden or empty nested paths as publishable source", async () => {
+    const commands: string[][] = [];
+    const sourceFolders = [
+      sourceInputDirs.docs,
+      sourceInputDirs.diagrams,
+      sourceInputDirs.manifests,
+      sourceInputDirs.profile,
+      sourceInputDirs.projects,
+      sourceInputDirs.resume,
+      sourceInputDirs.icons,
+    ];
+
+    for (const folder of sourceFolders) {
+      writeFixtureFile(join(folder, ".DS_Store"), "machine metadata");
+      mkdirSync(join(folder, "empty"), { recursive: true });
+    }
+
+    await expect(
+      publishSourceInputs({
+        commandRunner: async (_command, args) => {
+          commands.push(args);
+          return { stderr: "", stdout: "" };
+        },
+        env: {
+          SOURCE_ARTIFACTS_BUCKET: "artifact-source",
+          SOURCE_ASSETS_BUCKET: "asset-source",
+        },
+      }),
+    ).rejects.toThrow("No source files found for Docs source");
+    expect(commands).toEqual([]);
+  });
+
   test("excludes hidden source paths without naming machine-specific files", () => {
     expect(hiddenSourcePathExcludeArgs()).toEqual(["--exclude", ".*", "--exclude", "*/.*"]);
     expect(isHiddenSourcePath("project/.local-metadata")).toBe(true);

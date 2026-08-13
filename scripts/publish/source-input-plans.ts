@@ -1,4 +1,5 @@
 import { existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { envValue, requiredEnv } from "../core/environment.ts";
 import { repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 
@@ -99,8 +100,16 @@ export function sourceInputS3Uri(
 
 /**
  * @param directory - Source directory to inspect.
- * @returns Whether the directory contains any file or child directory.
+ * @returns Whether the directory contains a non-hidden source file at any depth.
  */
 export function hasSourceEntries(directory: string): boolean {
-  return existsSync(directory) && readdirSync(directory).length > 0;
+  if (!existsSync(directory)) return false;
+
+  return readdirSync(directory, { withFileTypes: true }).some((entry) => {
+    if (entry.name.startsWith(".")) return false;
+    if (entry.isFile()) return true;
+    if (!entry.isDirectory()) return false;
+
+    return hasSourceEntries(join(directory, entry.name));
+  });
 }

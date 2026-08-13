@@ -20,8 +20,8 @@ import { githubSourceUrl, type DocsPreviewOptions } from "./options.ts";
  * @param {Token} token - Marked token.
  * @returns {boolean} Whether the token is a link or image token.
  */
-function isHrefToken(token: Token): token is Tokens.Link | Tokens.Image {
-  return token.type === "link" || token.type === "image";
+function isLinkToken(token: Token): token is Tokens.Link {
+  return token.type === "link";
 }
 
 /**
@@ -42,19 +42,45 @@ function isExternalWebHref(href: string): boolean {
 }
 
 /**
+ * Returns true when a rendered Markdown destination uses an allowed local or external form.
+ */
+function isSafeMarkdownHref(href: string, image = false): boolean {
+  if (/[\u0000-\u001f\u007f\\]/u.test(href) || href.startsWith("//")) return false;
+  if (/^(?:\/|#|\?|\.\.?\/)/u.test(href)) return true;
+  if (!/^[a-z][a-z\d+.-]*:/iu.test(href)) return true;
+
+  return image ? /^https?:/iu.test(href) : /^(?:https?:|mailto:|tel:)/iu.test(href);
+}
+
+/**
  * Creates a Marked renderer that opens diagram and external links in a new tab.
  *
  * @returns Marked renderer.
  */
 function docsPreviewRenderer(): Renderer {
   const renderer = new Renderer();
-  const defaultLinkRenderer = renderer.link.bind(renderer);
+
+  renderer.html = ({ text }: Tokens.HTML | Tokens.Tag): string => escapeHtml(text);
 
   renderer.link = (token: Tokens.Link): string => {
-    const linkHtml = defaultLinkRenderer(token);
-    if (!isPreviewDiagramHref(token.href) && !isExternalWebHref(token.href)) return linkHtml;
+    if (!isSafeMarkdownHref(token.href)) return renderer.parser.parseInline(token.tokens);
 
-    return linkHtml.replace(/^<a /, '<a target="_blank" rel="noopener" ');
+    const text = renderer.parser.parseInline(token.tokens);
+    const titleAttribute = token.title ? ` title="${escapeHtml(token.title)}"` : "";
+    const targetAttributes =
+      isPreviewDiagramHref(token.href) || isExternalWebHref(token.href)
+        ? ' target="_blank" rel="noopener"'
+        : "";
+
+    return `<a${targetAttributes} href="${escapeHtml(token.href)}"${titleAttribute}>${text}</a>`;
+  };
+
+  renderer.image = (token: Tokens.Image): string => {
+    if (!isSafeMarkdownHref(token.href, true)) return escapeHtml(token.text);
+
+    const titleAttribute = token.title ? ` title="${escapeHtml(token.title)}"` : "";
+
+    return `<img src="${escapeHtml(token.href)}" alt="${escapeHtml(token.text)}"${titleAttribute}>`;
   };
 
   return renderer;
@@ -96,7 +122,7 @@ export async function renderDocArticle(
     gfm: true,
     renderer: docsPreviewRenderer(),
     walkTokens(token: Token): void {
-      if (!isHrefToken(token)) return;
+      if (!isLinkToken(token)) return;
 
       const targetId = localMarkdownTargetId(doc, token.href, knownIds);
       if (targetId) token.href = `#${targetId}`;
