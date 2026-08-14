@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.5.3 - 2026-08-14
+
+### Added
+
+- Hosted verification, Dependabot updates, a release-version check, and a security policy.
+- A CodeQL CLI 2.26.3 local gate for JavaScript, TypeScript, and GitHub Actions using the security-extended suites.
+
+### Changed
+
+- Pin third-party workflow actions and the tsgo preview snapshot to immutable revisions.
+- Keep the standard TypeScript compiler on 6.x until the lint toolchain supports 7.
+- Compare scans with the reviewed path and file-race baseline tracked in open issue #39; new or stale fingerprints fail verification.
+- Document branch names and Conventional Commit types.
+- Use the repository `tmp/s3-inputs` cache by default and test preview helpers without executing generated scripts.
+- Refresh and publish the Cipher documentation, diagrams, source manifest, and resume content.
+
+### Fixed
+
+- Restrict documentation previews to loopback hosts, bound browser startup waits, and format IPv6 loopback URLs correctly.
+- Verify the parent window and exact origin before exchanging embedded theme changes.
+
 ## 1.5.2 - 2026-08-02
 
 ### Added
