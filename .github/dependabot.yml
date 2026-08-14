@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # typescript-eslint currently supports the TypeScript 6.x compiler line.
+      - dependency-name: typescript
+        versions: [">=7.0.0"]
     groups:
       dependencies:
         patterns: ["*"]
