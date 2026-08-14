@@ -46,6 +46,9 @@ export interface DocsPreviewServerConfig {
 
 type Environment = Record<string, string | undefined>;
 
+const maximumPreviewWaitStepMs = 5_000;
+const maximumPreviewWaitTimeoutMs = 30_000;
+
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
   [".html", "text/html; charset=utf-8"],
@@ -62,18 +65,47 @@ const contentTypes = new Map([
  * @param {Environment} env - Environment values to inspect.
  * @param {string} key - Environment variable name.
  * @param {number} defaultValue - Default value when unset.
+ * @param {number} maximum - Inclusive upper bound for the setting.
  * @returns {number} Parsed value.
  */
-function positiveIntegerEnv(env: Environment, key: string, defaultValue: number): number {
+function positiveIntegerEnv(
+  env: Environment,
+  key: string,
+  defaultValue: number,
+  maximum: number,
+): number {
   const rawValue = env[key]?.trim();
   if (!rawValue) return defaultValue;
 
   const value = Number(rawValue);
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new Error(`${key} must be a positive integer.`);
+  if (!Number.isInteger(value) || value <= 0 || value > maximum) {
+    throw new Error(`${key} must be between 1 and ${maximum}.`);
   }
 
   return value;
+}
+
+/**
+ * Resolves a host that keeps the preview server and its readiness request local.
+ *
+ * @param {Environment} env - Environment values to inspect.
+ * @param {string} key - Environment variable name.
+ * @param {string} defaultValue - Local host used when unset.
+ * @returns {string} Canonical loopback host.
+ */
+function loopbackHostEnv(env: Environment, key: string, defaultValue: string): string {
+  const host = env[key]?.trim().toLowerCase() || defaultValue;
+
+  switch (host) {
+    case "127.0.0.1":
+      return "127.0.0.1";
+    case "::1":
+      return "::1";
+    case "localhost":
+      return "localhost";
+    default:
+      throw new Error(`${key} must be a loopback host.`);
+  }
 }
 
 /**
@@ -85,10 +117,7 @@ function positiveIntegerEnv(env: Environment, key: string, defaultValue: number)
  * @returns {number} Parsed port.
  */
 function portEnv(env: Environment, key: string, defaultValue: number): number {
-  const port = positiveIntegerEnv(env, key, defaultValue);
-  if (port > 65_535) throw new Error(`${key} must be between 1 and 65535.`);
-
-  return port;
+  return positiveIntegerEnv(env, key, defaultValue, 65_535);
 }
 
 /**
@@ -102,19 +131,25 @@ export function resolveDocsPreviewServerConfig(
 ): DocsPreviewServerConfig {
   return {
     arg: docsPreviewServer.arg,
-    host: env[docsPreviewServer.hostEnv]?.trim() || docsPreviewServer.defaultHost,
+    host: loopbackHostEnv(env, docsPreviewServer.hostEnv, docsPreviewServer.defaultHost),
     port: portEnv(env, docsPreviewServer.portEnv, docsPreviewServer.defaultPort),
     waitStepMs: positiveIntegerEnv(
       env,
       docsPreviewServer.waitStepMsEnv,
       docsPreviewServer.defaultWaitStepMs,
+      maximumPreviewWaitStepMs,
     ),
     waitTimeoutMs: positiveIntegerEnv(
       env,
       docsPreviewServer.waitTimeoutMsEnv,
       docsPreviewServer.defaultWaitTimeoutMs,
+      maximumPreviewWaitTimeoutMs,
     ),
   };
+}
+
+function urlHost(host: string): string {
+  return host === "::1" ? `[${host}]` : host;
 }
 
 /**
@@ -125,8 +160,10 @@ export function resolveDocsPreviewServerConfig(
  */
 /* istanbul ignore next */
 function sleep(ms: number): Promise<void> {
+  const delay = Math.min(ms, maximumPreviewWaitStepMs);
+
   return new Promise((resolveSleep) => {
-    setTimeout(resolveSleep, ms);
+    setTimeout(resolveSleep, delay);
   });
 }
 
@@ -141,7 +178,7 @@ export function docsPreviewUrl(
   output: string = docsPreviewOutput,
   config: DocsPreviewServerConfig = resolveDocsPreviewServerConfig(),
 ): string {
-  return `http://${config.host}:${config.port}/${encodeURIComponent(basename(output))}`;
+  return `http://${urlHost(config.host)}:${config.port}/${encodeURIComponent(basename(output))}`;
 }
 
 /**

@@ -34,23 +34,35 @@ describe("open docs preview", () => {
 
   test("resolves docs preview server settings from environment variables", () => {
     const config = resolveDocsPreviewServerConfig({
-      DOCS_PREVIEW_HOST: "0.0.0.0",
+      DOCS_PREVIEW_HOST: "::1",
       DOCS_PREVIEW_PORT: "41800",
       DOCS_PREVIEW_WAIT_STEP_MS: "25",
       DOCS_PREVIEW_WAIT_TIMEOUT_MS: "500",
     });
 
     expect(config).toMatchObject({
-      host: "0.0.0.0",
+      host: "::1",
       port: 41800,
       waitStepMs: 25,
       waitTimeoutMs: 500,
     });
     expect(docsPreviewUrl(existingPreviewPath, config)).toBe(
-      "http://0.0.0.0:41800/existing-preview.html",
+      "http://[::1]:41800/existing-preview.html",
     );
     expect(() => resolveDocsPreviewServerConfig({ DOCS_PREVIEW_PORT: "90000" })).toThrow(
       "DOCS_PREVIEW_PORT must be between 1 and 65535.",
+    );
+  });
+
+  test("rejects public hosts and unbounded preview waits", () => {
+    expect(() => resolveDocsPreviewServerConfig({ DOCS_PREVIEW_HOST: "0.0.0.0" })).toThrow(
+      "DOCS_PREVIEW_HOST must be a loopback host.",
+    );
+    expect(() => resolveDocsPreviewServerConfig({ DOCS_PREVIEW_WAIT_STEP_MS: "5001" })).toThrow(
+      "DOCS_PREVIEW_WAIT_STEP_MS must be between 1 and 5000.",
+    );
+    expect(() => resolveDocsPreviewServerConfig({ DOCS_PREVIEW_WAIT_TIMEOUT_MS: "30001" })).toThrow(
+      "DOCS_PREVIEW_WAIT_TIMEOUT_MS must be between 1 and 30000.",
     );
   });
 
