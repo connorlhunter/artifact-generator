@@ -1,0 +1,19 @@
+name: Documentation or architecture
+description: Propose a documentation or architecture update.
+title: "docs: "
+labels: [documentation]
+body:
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Describe the material that needs to change.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: List the observable conditions that will close this issue.
+    validations:
+      required: true

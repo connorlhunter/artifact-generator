@@ -1,0 +1,2 @@
+#!/bin/sh
+bun scripts/changes/validate-change-name.ts commit < "$1"
