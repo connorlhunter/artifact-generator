@@ -54,7 +54,7 @@ export interface AssembleSiteArtifactsOptions {
  */
 interface CopyPlan {
   /**
-   * Human readable label for logging.
+   * Display label for logging.
    */
   label: string;
   /**
