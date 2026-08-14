@@ -17,7 +17,7 @@ describe("renderCoveragePdf", () => {
     const output = join(tempDir, "index.pdf");
     writeFileSync(input, "<!doctype html><title>Coverage</title><main><h1>Coverage</h1></main>");
 
-    await expect(renderCoveragePdf(input, output)).resolves.toBe(output);
+    expect(await renderCoveragePdf(input, output)).toBe(output);
     expect(existsSync(output)).toBe(true);
     expect(readFileSync(output).subarray(0, 4).toString()).toBe("%PDF");
   });

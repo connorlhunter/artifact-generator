@@ -2,6 +2,7 @@ import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import puppeteer from "puppeteer";
 import { ensureDirectory } from "../core/bun-native-fs.ts";
+import { pdfBrowserLaunchOptions } from "../core/pdf-browser.ts";
 import { artifactPaths } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logError, logSuccess } from "../core/script-logger.ts";
@@ -19,7 +20,7 @@ export async function renderCoveragePdf(
 ): Promise<string> {
   ensureDirectory(dirname(output));
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch(pdfBrowserLaunchOptions(process.env.CI === "true"));
 
   try {
     const page = await browser.newPage();

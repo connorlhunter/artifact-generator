@@ -113,6 +113,10 @@ test/                 tests arranged to mirror the script folders
 
 The project uses Bun for installs, scripts, and tests. TypeScript is compiled with `tsgo`. Generated docs PDFs use Puppeteer and honor `PUPPETEER_EXECUTABLE_PATH` when it is set. Resume builds read `artifacts/resume/Tectonic.toml` from the selected local or S3-backed source bundle and compile a staged copy with Tectonic.
 
+## Releases
+
+`package.json` is the Artifact Generator release-version source. Keep the first `CHANGELOG.md` heading aligned with it; `bun run version:check` enforces the pair in the normal verification gate.
+
 ## Quality Checks
 
 `bun run verify` runs the dependency audit, formatting check, lint, typecheck, and test suite. The committed pre-commit and pre-push hooks run the same command.
