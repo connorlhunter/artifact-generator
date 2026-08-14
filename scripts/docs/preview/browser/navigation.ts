@@ -125,27 +125,6 @@ function scrollNavLinkIntoView(
 }
 
 /**
- * Applies one active heading state inside a left or right heading collection.
- */
-function syncHeadingLinkState(
-  links: HTMLElement | null,
-  current: HTMLElement | undefined,
-): HTMLAnchorElement | undefined {
-  let activeLink: HTMLAnchorElement | undefined;
-
-  Array.from(links?.querySelectorAll<HTMLAnchorElement>("a") ?? []).forEach((link) => {
-    const active = Boolean(current) && link.hash === `#${current?.id}`;
-    link.classList.toggle("is-active", active);
-    if (active) {
-      link.setAttribute("aria-current", "true");
-      activeLink = link;
-    } else link.removeAttribute("aria-current");
-  });
-
-  return activeLink;
-}
-
-/**
  * Keeps active-link auto-scroll scoped to layouts that actually have a
  * separate sidebar scroll area, such as the mobile constrained nav panel.
  */

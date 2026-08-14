@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { runInNewContext } from "node:vm";
 import { renderDiagramPreviewPage } from "../../scripts/docs/preview/diagram-page-html.ts";
+import {
+  buildNavHeadingLinks,
+  syncHeadingLinkState,
+  type HeadingLinkState,
+} from "../../scripts/docs/preview/browser/heading-links.ts";
 import {
   loadDocsPreviewClientScript,
   resolveBrowserScriptDir,
+  stripBrowserModuleSyntax,
   stripSourceMapComment,
 } from "../../scripts/docs/preview/client.ts";
 import { loadDocsPreviewStyles, resolveStylesPath } from "../../scripts/docs/preview/styles.ts";
@@ -290,36 +293,21 @@ describe("docs preview assets", () => {
   });
 
   test("moves active heading state between left navigation links", () => {
-    type SyncHeadingLinkState = (
-      links: { querySelectorAll(selector: string): FakeHeadingLink[] } | null,
-      current: { id: string } | undefined,
-    ) => FakeHeadingLink | undefined;
-
-    const context: { captured?: SyncHeadingLinkState } = {};
-    const script = readFileSync(
-      resolve(
-        resolveBrowserScriptDir(
-          new URL("../../scripts/docs/preview/client.ts", import.meta.url).href,
-        ),
-        "navigation.js",
-      ),
-      "utf8",
-    );
-    runInNewContext(`${script}\nglobalThis.captured = syncHeadingLinkState;`, context);
-
     const first = fakeHeadingLink("#first");
     const second = fakeHeadingLink("#second");
     const links = { querySelectorAll: () => [first, second] };
-    const syncHeadingLinkState = context.captured;
 
-    expect(typeof syncHeadingLinkState).toBe("function");
-    expect(syncHeadingLinkState?.(links, { id: "second" })).toBe(second);
+    expect(
+      syncHeadingLinkState(links as unknown as HTMLElement, { id: "second" } as HTMLElement),
+    ).toBe(second as unknown as HTMLAnchorElement);
     expect(first.classes.has("is-active")).toBe(false);
     expect(first.attributes.has("aria-current")).toBe(false);
     expect(second.classes.has("is-active")).toBe(true);
     expect(second.attributes.get("aria-current")).toBe("true");
 
-    expect(syncHeadingLinkState?.(links, { id: "first" })).toBe(first);
+    expect(
+      syncHeadingLinkState(links as unknown as HTMLElement, { id: "first" } as HTMLElement),
+    ).toBe(first as unknown as HTMLAnchorElement);
     expect(first.classes.has("is-active")).toBe(true);
     expect(second.classes.has("is-active")).toBe(false);
     expect(second.attributes.has("aria-current")).toBe(false);
@@ -341,18 +329,6 @@ describe("docs preview assets", () => {
       setAttribute(name: string, value: string): void;
     }
 
-    type BuildNavHeadingLinks = (
-      state: {
-        activeHeadings: Array<{ id: string; tagName: string; textContent: string }>;
-        navHeadingLinks: HeadingLinksContainer | null;
-        navLinks: Array<{
-          after(links: HeadingLinksContainer): void;
-          dataset: { docId: string };
-        }>;
-      },
-      article: { dataset: { docTitle: string }; id: string },
-    ) => void;
-
     const children: BuiltHeadingLink[] = [];
     const labels = new Map<string, string>();
     const container: HeadingLinksContainer = {
@@ -369,42 +345,26 @@ describe("docs preview assets", () => {
       },
     };
     const insertion: { links?: HeadingLinksContainer } = {};
-    const context: {
-      captured?: BuildNavHeadingLinks;
-      document: { createElement(tagName: string): BuiltHeadingLink };
-    } = {
-      document: {
-        createElement: () => ({ className: "", dataset: {}, href: "", textContent: "" }),
-      },
-    };
-    const script = readFileSync(
-      resolve(
-        resolveBrowserScriptDir(
-          new URL("../../scripts/docs/preview/client.ts", import.meta.url).href,
-        ),
-        "outline.js",
-      ),
-      "utf8",
-    );
-    runInNewContext(`${script}\nglobalThis.captured = buildNavHeadingLinks;`, context);
-
-    context.captured?.(
-      {
-        activeHeadings: [
-          { id: "overview-heading-0", tagName: "H1", textContent: "Portfolio" },
-          { id: "overview-heading-1", tagName: "H2", textContent: "What This App Owns" },
-        ],
-        navHeadingLinks: container,
-        navLinks: [
-          {
-            after(links) {
-              insertion.links = links;
-            },
-            dataset: { docId: "overview" },
+    const state = {
+      activeHeadings: [
+        { id: "overview-heading-0", tagName: "H1", textContent: "Portfolio" },
+        { id: "overview-heading-1", tagName: "H2", textContent: "What This App Owns" },
+      ],
+      navHeadingLinks: container,
+      navLinks: [
+        {
+          after(links: HeadingLinksContainer) {
+            insertion.links = links;
           },
-        ],
-      },
-      { dataset: { docTitle: "Overview" }, id: "overview" },
+          dataset: { docId: "overview" },
+        },
+      ],
+    };
+
+    buildNavHeadingLinks(
+      state as unknown as HeadingLinkState,
+      { dataset: { docTitle: "Overview" }, id: "overview" } as unknown as HTMLElement,
+      () => ({ className: "", dataset: {}, href: "", textContent: "" }) as HTMLAnchorElement,
     );
 
     expect(insertion.links).toBe(container);
@@ -430,6 +390,9 @@ describe("docs preview assets", () => {
     );
     expect(stripSourceMapComment("const value = 1;\n//# sourceMappingURL=value.js.map")).toBe(
       "const value = 1;",
+    );
+    expect(stripBrowserModuleSyntax("export function example() {}\n")).toBe(
+      "function example() {}\n",
     );
   });
 });
