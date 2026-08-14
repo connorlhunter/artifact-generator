@@ -13,6 +13,7 @@ amplifyconfiguration.json
 *.tsbuildinfo
 .eslintcache
 .prettiercache
+.codeql-cache/
 tmp/
 
 # S3 source inputs belong in private S3 or the disposable source cache.

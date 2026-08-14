@@ -1,0 +1,11 @@
+name: Artifact Generator CodeQL
+
+queries:
+  - uses: security-extended
+
+paths-ignore:
+  - .codeql-cache/**
+  - coverage/**
+  - dist/**
+  - node_modules/**
+  - tmp/**

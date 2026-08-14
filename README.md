@@ -16,6 +16,8 @@ bun run verify
 
 `artifacts:source:sync` copies the private S3 source inputs into the ignored `tmp/s3-inputs/` folder. Renderers and publish commands use that local copy.
 
+Local verification also requires CodeQL CLI 2.26.3 on `PATH`.
+
 ## Edit And Publish
 
 1. Run `bun run artifacts:source:sync`.
@@ -82,6 +84,7 @@ Project coverage folders are excluded from the generator bundle. Each applicatio
 | Generate coverage          | `bun run test:coverage`                     |
 | Open coverage              | `bun run coverage:open`                     |
 | Generate resume PDF        | `bun run resume:build`                      |
+| Run the local CodeQL scan  | `bun run codeql:scan`                       |
 | Build publish bundles      | `bun run artifacts:build`                   |
 | Publish generated bundles  | `bun run artifacts:publish`                 |
 | Build and publish bundles  | `bun run artifacts:ship`                    |
@@ -117,9 +120,15 @@ The project uses Bun for installs, scripts, and tests. TypeScript is compiled wi
 
 `package.json` is the Artifact Generator release-version source. Keep the first `CHANGELOG.md` heading aligned with it; `bun run version:check` enforces the pair in the normal verification gate.
 
+## Change Naming
+
+Use `<type>/<short-description>` branches and `<type>: <summary>` Conventional Commits. Supported types are `feat`, `fix`, `chore`, `docs`, `test`, and `refactor`; an optional scope may follow the type.
+
 ## Quality Checks
 
-`bun run verify` runs the dependency audit, formatting check, lint, typecheck, and test suite. The committed pre-commit and pre-push hooks run the same command.
+`bun run verify` runs the dependency audit, formatting check, lint, typecheck, test suite, and local CodeQL security scan. The committed pre-commit and pre-push hooks run the same command. GitHub Actions defers this local scan to the repository's hosted CodeQL checks.
+
+The local scan covers JavaScript, TypeScript, and GitHub Actions with the security-extended suites. Its reviewed baseline contains only the path and file-race findings tracked in [#39](https://github.com/connorlhunter/artifact-generator/issues/39); new or stale fingerprints fail verification.
 
 Dependency pins and temporary release-age exceptions live in `dependency-policy.toml`. Keep the exception table empty unless a pinned urgent update cannot wait for the configured one-week release age.
 
