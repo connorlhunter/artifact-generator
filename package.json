@@ -21,6 +21,8 @@
     "build": "bun scripts/core/clean-dist.ts && bun x tsgo -p tsconfig.json",
     "typecheck": "bun x tsgo --noEmit -p tsconfig.json",
     "version:check": "bun scripts/release/check-release-version.ts",
+    "naming:branch": "bun scripts/changes/validate-change-name.ts branch",
+    "naming:pr": "bun scripts/changes/validate-change-name.ts pr-title",
     "format": "bun x prettier --write . --ignore-unknown",
     "format:check": "bun x prettier --check . --ignore-unknown",
     "lint": "bun x eslint .",
@@ -38,7 +40,7 @@
     "diagrams:render:open": "bun run build && SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun dist/scripts/diagrams/render-open-diagrams.js",
     "resume:build": "SOURCE_INPUT_CACHE_DIR=tmp/s3-inputs bun scripts/resume/build-resume.ts",
     "prepare": "bun scripts/git-hooks/setup-git-hooks.ts",
-    "verify": "bun run version:check && bun run audit && bun run format:check && bun run lint && bun run typecheck && bun run test && bun run codeql:scan"
+    "verify": "bun run naming:branch && bun run version:check && bun run audit && bun run format:check && bun run lint && bun run typecheck && bun run test && bun run codeql:scan"
   },
   "lint-staged": {
     "*.{js,ts}": [

@@ -122,7 +122,11 @@ The project uses Bun for installs, scripts, and tests. TypeScript is compiled wi
 
 ## Change Naming
 
-Use `<type>/<short-description>` branches and `<type>: <summary>` Conventional Commits. Supported types are `feat`, `fix`, `chore`, `docs`, `test`, and `refactor`; an optional scope may follow the type.
+- Branches use `<type>/<kebab-summary>`, where `type` is `feat`, `fix`, `chore`, `docs`, `test`, or `refactor`.
+- Issue, pull request, and commit subjects use `<type>[(scope)][!]: <summary>`.
+- Release branches use `release/<version>`, the release commit uses `chore(release): prepare <version>`, and the tag uses `v<version>`.
+- Dependabot's generated `dependabot/*` branches are accepted automatically.
+- Existing Git history stays unchanged; the convention applies to new changes.
 
 ## Quality Checks
 

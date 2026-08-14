@@ -24,6 +24,11 @@ jobs:
       - uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd # v2.1.2
         id: chrome
       - run: ${{ steps.chrome.outputs.chrome-path }} --version
+      - name: Validate pull request title
+        if: github.event_name == 'pull_request'
+        run: bun run naming:pr
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
       - run: bun run verify
         env:
           PUPPETEER_EXECUTABLE_PATH: ${{ steps.chrome.outputs.chrome-path }}
