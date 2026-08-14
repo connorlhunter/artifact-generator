@@ -23,6 +23,7 @@ jobs:
       - run: bun install --frozen-lockfile --ignore-scripts
       - uses: browser-actions/setup-chrome@v2
         id: chrome
+      - run: ${{ steps.chrome.outputs.chrome-path }} --version
       - run: bun run verify
         env:
           PUPPETEER_EXECUTABLE_PATH: ${{ steps.chrome.outputs.chrome-path }}

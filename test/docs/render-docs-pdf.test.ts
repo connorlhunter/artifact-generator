@@ -21,9 +21,13 @@ describe("renderDocsPdf", () => {
       '<!doctype html><title>Docs</title><main><a href="diagrams/cipher/cipher-overview.html">Diagram</a></main>',
     );
 
-    await expect(
-      renderDocsPdf(input, output, "https://d1y1afhnwsku2p.cloudfront.net/docs/cipher/index.html"),
-    ).resolves.toBe(output);
+    expect(
+      await renderDocsPdf(
+        input,
+        output,
+        "https://d1y1afhnwsku2p.cloudfront.net/docs/cipher/index.html",
+      ),
+    ).toBe(output);
     expect(existsSync(output)).toBe(true);
     const pdf = readFileSync(output);
     expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
