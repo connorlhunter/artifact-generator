@@ -47,6 +47,7 @@ const standardPreferenceScheme = findPreviewScheme("atlas") ?? defaultPreviewSch
 const dimPreferenceScheme = findPreviewScheme("harbor") ?? defaultPreviewScheme;
 const projectIconSvgCache = new Map<string, Promise<string | null>>();
 const themedProjectIconCache = new Map<string, string>();
+const loopbackHosts = new Set(["127.0.0.1", "::1", "localhost"]);
 
 /**
  * Returns a configured preview color scheme.
@@ -169,15 +170,50 @@ function messageScheme(value: unknown): PreviewScheme | null {
 }
 
 /**
+ * Returns a trusted portfolio origin for embedded preview messaging.
+ *
+ * Production messages are limited to the configured product domain and local
+ * development accepts loopback origins only.
+ *
+ * @param value - Candidate embedding origin or referrer.
+ * @returns Canonical trusted origin, or `null` when it is not allowed.
+ */
+function trustedEmbeddingOrigin(value: string): string | null {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+    const isProductHost =
+      hostname === sharedSchemeRootDomain || hostname.endsWith(`.${sharedSchemeRootDomain}`);
+    const isLoopbackHost = loopbackHosts.has(hostname);
+
+    if ((url.protocol === "https:" && isProductHost) || isLoopbackHost) {
+      return url.origin;
+    }
+  } catch {
+    // A missing or malformed referrer cannot identify a trusted parent.
+  }
+
+  return null;
+}
+
+/**
+ * Returns the verified origin of the page embedding this preview.
+ */
+function embeddedParentOrigin(): string | null {
+  if (window.parent === window) return null;
+
+  return trustedEmbeddingOrigin(document.referrer);
+}
+
+/**
  * Sends the selected scheme to the embedding portfolio shell.
  */
 function broadcastScheme(scheme: PreviewScheme): void {
-  if (window.parent === window) {
-    return;
-  }
+  const parentOrigin = embeddedParentOrigin();
+  if (!parentOrigin) return;
 
   try {
-    window.parent.postMessage({ scheme: scheme.id, type: schemeMessageType }, "*");
+    window.parent.postMessage({ scheme: scheme.id, type: schemeMessageType }, parentOrigin);
   } catch {
     // Standalone previews still persist locally when cross-frame messaging is blocked.
   }
@@ -390,6 +426,11 @@ function wireSchemeToggle(state: PreviewState): void {
   window.addEventListener(
     "message",
     (event) => {
+      const parentOrigin = embeddedParentOrigin();
+      if (!parentOrigin || event.source !== window.parent || event.origin !== parentOrigin) {
+        return;
+      }
+
       const scheme = messageScheme(event.data);
       if (scheme && scheme.id !== currentScheme.id) {
         syncScheme(scheme, { broadcast: false, save: true });

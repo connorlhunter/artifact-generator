@@ -200,8 +200,11 @@ describe("docs preview assets", () => {
     expect(script).toContain("connorhunter.theme.scheme");
     expect(script).toContain("schemeMessageType");
     expect(script).toContain("broadcastScheme");
+    expect(script).toContain("trustedEmbeddingOrigin");
     expect(script).toContain("window.parent.postMessage");
     expect(script).toContain('addEventListener("message"');
+    expect(script).toContain("event.source !== window.parent");
+    expect(script).toContain("event.origin !== parentOrigin");
     expect(script).toContain('addEventListener("storage"');
     expect(script).toContain("wireMobileNavResize");
     expect(script).toContain("wireNavControlsResize");
