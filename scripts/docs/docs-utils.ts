@@ -630,7 +630,7 @@ export function orderedDocsForPreview(docs: MarkdownDoc[]): MarkdownDoc[] {
  * based on the selected project group when exactly one project is present.
  *
  * @param {MarkdownDoc[]} docs - Markdown docs included in the preview.
- * @returns {string} Human-readable preview title.
+ * @returns {string} Preview title.
  */
 export function docsPreviewTitle(docs: MarkdownDoc[]): string {
   const projectGroups = orderedDocGroups(docs).filter(
