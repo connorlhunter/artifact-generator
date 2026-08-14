@@ -6,6 +6,7 @@ const browserScriptOutputFiles = [
   "state.js",
   "cleanup.js",
   "scroll.js",
+  "heading-links.js",
   "outline.js",
   "navigation.js",
   "resize.js",
@@ -30,7 +31,7 @@ export async function loadDocsPreviewClientScript(): Promise<string> {
     await Promise.all(
       browserScriptOutputFiles.map(async (file): Promise<string> => {
         const contents = await readText(resolve(scriptDir, file));
-        return stripSourceMapComment(contents);
+        return stripBrowserModuleSyntax(contents);
       }),
     )
   ).join("\n");
@@ -60,4 +61,14 @@ export function resolveBrowserScriptDir(moduleUrl: string): string {
  */
 export function stripSourceMapComment(contents: string): string {
   return contents.replace(/\n\/\/# sourceMappingURL=.*$/gm, "");
+}
+
+/**
+ * Removes module markers from browser helpers before they are inlined.
+ *
+ * @param {string} contents - Compiled browser helper source.
+ * @returns {string} Browser source that can run inside the preview wrapper.
+ */
+export function stripBrowserModuleSyntax(contents: string): string {
+  return stripSourceMapComment(contents).replace(/^export\s+/gmu, "");
 }

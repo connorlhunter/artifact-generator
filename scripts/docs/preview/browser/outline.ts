@@ -30,34 +30,6 @@ function showOutlineMessage(state: PreviewState, title: string, message: string)
 }
 
 /**
- * Builds in-document heading links beneath the active document in the left sidebar.
- */
-function buildNavHeadingLinks(state: PreviewState, article: HTMLElement): void {
-  const links = state.navHeadingLinks;
-  if (!links) return;
-
-  links.replaceChildren();
-  links.hidden = true;
-
-  const activeDocLink = state.navLinks.find((link) => link.dataset.docId === article.id);
-  if (!activeDocLink || state.activeHeadings.length === 0) return;
-
-  activeDocLink.after(links);
-  links.setAttribute("aria-label", `Sections in ${article.dataset.docTitle || "current document"}`);
-
-  state.activeHeadings.forEach((heading) => {
-    const link = document.createElement("a");
-    link.href = `#${heading.id}`;
-    link.textContent = heading.textContent || "Section";
-    link.className = `nav-heading-link depth-${heading.tagName.toLowerCase()}`;
-    link.dataset.navHeadingLink = "";
-    links.append(link);
-  });
-
-  links.hidden = false;
-}
-
-/**
  * Builds the right-side heading outline for the active article.
  */
 function buildOutline(

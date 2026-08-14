@@ -41,6 +41,14 @@ describe("source input selection", () => {
     });
   });
 
+  test("uses the repository S3 input cache when no override is configured", () => {
+    expect(selectSourceInputs([], {}, "/workspace")).toEqual({
+      args: [],
+      mode: "cache",
+      root: join("tmp", "s3-inputs"),
+    });
+  });
+
   test("rejects ambiguous or empty local selectors", () => {
     expect(() => selectSourceInputs(["local="])).toThrow("local=<path> requires a directory path.");
     expect(() => selectSourceInputs(["local=one", "local=two"])).toThrow(

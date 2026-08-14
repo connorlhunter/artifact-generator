@@ -1,5 +1,4 @@
 import { existsSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 export const localSourceInputPrefix = "local=";
@@ -46,7 +45,7 @@ export function selectSourceInputs(
   return {
     args: commandArgs,
     mode: "cache",
-    root: env.SOURCE_INPUT_CACHE_DIR?.trim() || join(tmpdir(), "artifact-generator-source-cache"),
+    root: env.SOURCE_INPUT_CACHE_DIR?.trim() || join("tmp", "s3-inputs"),
   };
 }
 
