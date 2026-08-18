@@ -52,32 +52,34 @@ describe("build resume", () => {
     expect(existsSync(join(sourceDirectory, "build", "stale.pdf"))).toBe(true);
   });
 
-  test("reads document and PDF output names from Tectonic config", () => {
+  test("reads document and PDF output names from Tectonic config", async () => {
     const sourceDirectory = join(tempDirectory, "resume-source");
     writeResumeSource(sourceDirectory);
 
-    expect(readResumeProjectConfig(sourceDirectory)).toEqual({
+    await expect(readResumeProjectConfig(sourceDirectory)).resolves.toEqual({
       documentName: "fixture-resume",
       outputName: "fixture-output",
     });
   });
 
-  test("requires a selected resume source project", () => {
+  test("requires a selected resume source project", async () => {
     const sourceDirectory = join(tempDirectory, "missing");
 
-    expect(() => readResumeProjectConfig(sourceDirectory)).toThrow(
+    await expect(readResumeProjectConfig(sourceDirectory)).rejects.toThrow(
       "Missing resume source directory",
     );
 
     mkdirSync(sourceDirectory, { recursive: true });
-    expect(() => readResumeProjectConfig(sourceDirectory)).toThrow("Missing resume source config");
+    await expect(readResumeProjectConfig(sourceDirectory)).rejects.toThrow(
+      "Missing resume source config",
+    );
   });
 
-  test("requires a named PDF output in Tectonic config", () => {
+  test("requires a named PDF output in Tectonic config", async () => {
     const sourceDirectory = join(tempDirectory, "resume-source");
     writeFixtureFile(join(sourceDirectory, "Tectonic.toml"), '[doc]\nname = "fixture-resume"\n');
 
-    expect(() => readResumeProjectConfig(sourceDirectory)).toThrow(
+    await expect(readResumeProjectConfig(sourceDirectory)).rejects.toThrow(
       "must define a named PDF output",
     );
   });

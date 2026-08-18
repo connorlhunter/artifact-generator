@@ -195,13 +195,13 @@
       "ruleId": "js/path-injection"
     },
     {
-      "fingerprint": "primaryLocationLineHash:aff91639207a2fee:1|primaryLocationStartColumnFingerprint:23",
+      "fingerprint": "primaryLocationLineHash:74ae7c26493d4754:1|primaryLocationStartColumnFingerprint:16",
       "language": "javascript-typescript",
       "path": "scripts/resume/build-resume.ts",
       "ruleId": "js/path-injection"
     },
     {
-      "fingerprint": "primaryLocationLineHash:3b86f8eced1e0f31:1|primaryLocationStartColumnFingerprint:30",
+      "fingerprint": "primaryLocationLineHash:74ae7c26493d4754:1|primaryLocationStartColumnFingerprint:46",
       "language": "javascript-typescript",
       "path": "scripts/resume/build-resume.ts",
       "ruleId": "js/path-injection"
