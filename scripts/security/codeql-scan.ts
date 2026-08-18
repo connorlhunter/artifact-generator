@@ -46,6 +46,12 @@ export interface BaselineComparison {
   staleFindings: BaselineFinding[];
 }
 
+/** Optional collaborators for a local CodeQL scan. */
+export interface CodeqlScanOptions {
+  readonly commandRunner?: typeof runCommand;
+  readonly env?: NodeJS.ProcessEnv;
+}
+
 /** Reads a CodeQL CLI version response. */
 export function parseCodeqlVersion(contents: string): string {
   const parsed = JSON.parse(contents) as { version?: unknown };
@@ -149,8 +155,11 @@ export function compareWithBaseline(
 }
 
 /** Runs the repository's local CodeQL security scan. */
-export async function scanWithCodeql(): Promise<void> {
-  if (process.env.GITHUB_ACTIONS === "true") {
+export async function scanWithCodeql(options: CodeqlScanOptions = {}): Promise<void> {
+  const env = options.env ?? process.env;
+  const commandRunner = options.commandRunner ?? runCommand;
+
+  if (env.GITHUB_ACTIONS === "true") {
     console.log("Local CodeQL scan deferred to the hosted CodeQL checks.");
     return;
   }
@@ -166,7 +175,7 @@ export async function scanWithCodeql(): Promise<void> {
   const codeql = "codeql";
   let versionOutput: Awaited<ReturnType<typeof runCommand>>;
   try {
-    versionOutput = await runCommand(
+    versionOutput = await commandRunner(
       codeql,
       ["version", "--format=json"],
       {},
@@ -188,7 +197,7 @@ export async function scanWithCodeql(): Promise<void> {
     const resultPath = join(cacheRoot, `${scan.language}.sarif`);
     console.log(`Scanning ${scan.language} with CodeQL ${expectedVersion}...`);
 
-    await runCommand(
+    await commandRunner(
       codeql,
       [
         "database",
@@ -202,7 +211,7 @@ export async function scanWithCodeql(): Promise<void> {
       { subject: scan.language },
       { cwd: repositoryRoot },
     );
-    await runCommand(
+    await commandRunner(
       codeql,
       [
         "database",

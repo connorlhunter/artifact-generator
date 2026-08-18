@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import {
+  publishSiteArtifacts,
   publishDestinations,
   publishInvalidations,
 } from "../../scripts/publish/publish-site-artifacts.ts";
@@ -108,5 +109,66 @@ describe("publish site artifacts", () => {
         path: "/*",
       },
     ]);
+  });
+
+  test("syncs both bundles and invalidates configured origins", async () => {
+    const commands: Array<{ args: readonly string[]; subject: unknown }> = [];
+    const log = spyOn(console, "log").mockImplementation(() => undefined);
+
+    await publishSiteArtifacts({
+      commandRunner: async (_command, args, context) => {
+        commands.push({ args, subject: context?.subject });
+        return { stderr: "", stdout: "" };
+      },
+      destinations: [
+        {
+          bucket: "artifact-bucket",
+          cloudFrontDistributionId: "artifact-distribution",
+          label: "Artifact bundle",
+          prefix: "",
+          source: "dist/site-artifacts",
+          syncFilters: ["--exclude", "projects/*/coverage/*"],
+        },
+        {
+          bucket: "asset-bucket",
+          cloudFrontDistributionId: "",
+          label: "Asset bundle",
+          prefix: "site-assets",
+          source: "dist/site-assets",
+          syncFilters: [],
+        },
+      ],
+    });
+
+    expect(commands).toEqual([
+      {
+        args: [
+          "s3",
+          "sync",
+          "dist/site-artifacts",
+          "s3://artifact-bucket/",
+          "--delete",
+          "--exclude",
+          "projects/*/coverage/*",
+        ],
+        subject: "Artifact bundle",
+      },
+      {
+        args: ["s3", "sync", "dist/site-assets", "s3://asset-bucket/site-assets/", "--delete"],
+        subject: "Asset bundle",
+      },
+      {
+        args: [
+          "cloudfront",
+          "create-invalidation",
+          "--distribution-id",
+          "artifact-distribution",
+          "--paths",
+          "/*",
+        ],
+        subject: "Artifact bundle CloudFront invalidation",
+      },
+    ]);
+    expect(String(log.mock.calls.at(-1)?.[0])).toContain("Published generated artifacts to S3");
   });
 });

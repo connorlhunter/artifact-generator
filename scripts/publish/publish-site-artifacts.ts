@@ -27,6 +27,12 @@ interface PublishInvalidation {
   readonly path: string;
 }
 
+/** Optional collaborators for publishing a prepared artifact bundle. */
+export interface PublishSiteArtifactsOptions {
+  readonly commandRunner?: typeof runCommand;
+  readonly destinations?: PublishDestination[];
+}
+
 const artifactsBucketEnv = "ARTIFACTS_BUCKET";
 const artifactsCloudFrontDistributionEnv = "ARTIFACTS_CLOUDFRONT_DISTRIBUTION_ID";
 const artifactsPrefixEnv = "ARTIFACTS_PREFIX";
@@ -109,14 +115,17 @@ export function publishInvalidations(
 /**
  * Publishes generated CloudFront-ready bundles to private S3 origins.
  */
-export async function publishSiteArtifacts(): Promise<void> {
-  const destinations = publishDestinations();
+export async function publishSiteArtifacts(
+  options: PublishSiteArtifactsOptions = {},
+): Promise<void> {
+  const commandRunner = options.commandRunner ?? runCommand;
+  const destinations = options.destinations ?? publishDestinations();
   logHeading("Publishing generated artifacts to S3", { count: destinations.length });
 
   for (const destination of destinations) {
     const target = s3Uri(destination.bucket, destination.prefix);
     logItem(`${destination.label}: ${destination.source} -> ${target}`, 1);
-    await runCommand(
+    await commandRunner(
       "aws",
       ["s3", "sync", destination.source, target, "--delete", ...destination.syncFilters],
       {
@@ -127,7 +136,7 @@ export async function publishSiteArtifacts(): Promise<void> {
 
   for (const invalidation of publishInvalidations(destinations)) {
     logItem(`Invalidating CloudFront path: ${invalidation.path}`, 1);
-    await runCommand(
+    await commandRunner(
       "aws",
       [
         "cloudfront",

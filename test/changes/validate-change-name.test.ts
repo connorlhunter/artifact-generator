@@ -1,9 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 
 import {
   commitSubject,
   isValidBranchName,
   isValidChangeSubject,
+  runChangeNameValidation,
   validateBranchName,
   validateChangeSubject,
 } from "../../scripts/changes/validate-change-name.ts";
@@ -70,5 +71,33 @@ describe("change subject naming", () => {
     expect(commitSubject("\n# template\nfix: keep the first subject\n\nDetails\n")).toBe(
       "fix: keep the first subject",
     );
+  });
+});
+
+describe("change naming commands", () => {
+  const originalHeadRef = process.env.GITHUB_HEAD_REF;
+  const originalPrTitle = process.env.PR_TITLE;
+
+  test("validates branch, commit, and pull request command inputs", () => {
+    process.env.GITHUB_HEAD_REF = "feat/multi-page-coverage";
+    process.env.PR_TITLE = "feat: add multi-page coverage";
+
+    expect(() => runChangeNameValidation("branch")).not.toThrow();
+    expect(() => runChangeNameValidation("commit", "fix: restore coverage gate")).not.toThrow();
+    expect(() => runChangeNameValidation("pr-title")).not.toThrow();
+  });
+
+  test("rejects invalid commands and titles", () => {
+    process.env.PR_TITLE = "Unprefixed title";
+
+    expect(() => runChangeNameValidation("pr-title")).toThrow("Pull request subject");
+    expect(() => runChangeNameValidation("unknown")).toThrow("Use branch, commit, or pr-title.");
+  });
+
+  afterEach(() => {
+    if (originalHeadRef === undefined) delete process.env.GITHUB_HEAD_REF;
+    else process.env.GITHUB_HEAD_REF = originalHeadRef;
+    if (originalPrTitle === undefined) delete process.env.PR_TITLE;
+    else process.env.PR_TITLE = originalPrTitle;
   });
 });

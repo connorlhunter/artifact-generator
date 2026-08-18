@@ -26,8 +26,16 @@ export const publishOutputs = {
   siteAssets: join(repoDirs.dist, "site-assets"),
 } as const;
 
+interface CoveragePage {
+  id: string;
+  label: string;
+  path: string;
+  pdfPath?: string;
+}
+
 interface ProjectArtifactManifestEntry {
   coveragePath?: string;
+  coveragePages?: CoveragePage[];
   coveragePdfPath?: string;
   docsPath: string;
   docsPdfPath?: string;
@@ -196,6 +204,14 @@ export function addGeneratedPdfPaths(
 
   if (artifactGenerator?.coveragePath && isFile(artifactPaths.coverageReportPdf)) {
     artifactGenerator.coveragePdfPath = artifactGenerator.coveragePath.replace(/\.html$/u, ".pdf");
+    artifactGenerator.coveragePages = [
+      {
+        id: "typescript",
+        label: "TypeScript",
+        path: artifactGenerator.coveragePath,
+        pdfPath: artifactGenerator.coveragePdfPath,
+      },
+    ];
   }
 
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
