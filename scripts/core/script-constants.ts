@@ -16,9 +16,9 @@ export const repoDirs = {
 } as const;
 
 /**
- * Root for source inputs pulled from S3 or selected with `local=<path>`.
+ * Root for source inputs pulled from S3 or selected with `local=<bundle>`.
  *
- * The CLI selector takes precedence over the configured S3 cache directory.
+ * The CLI selector takes precedence over the repository S3 cache directory.
  */
 export const sourceInputRoot = sourceInputSelection.root;
 

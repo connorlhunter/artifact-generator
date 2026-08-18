@@ -51,7 +51,7 @@ export async function renderCoveragePdf(
 /* istanbul ignore next */
 if (isEntrypoint(import.meta.url)) {
   try {
-    await renderCoveragePdf(process.argv[2], process.argv[3]);
+    await renderCoveragePdf();
   } catch (error) {
     logError(error instanceof Error ? error.message : String(error));
     process.exit(1);

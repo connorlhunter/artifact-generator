@@ -6,6 +6,7 @@ import { copyFile, ensureDirectory, removePath } from "../core/bun-native-fs.ts"
 import { artifactPaths, executables, sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logCaughtError, logHeading, logSuccess } from "../core/script-logger.ts";
+import { validateSourceInputSelection } from "../core/source-input-selection.ts";
 import { runCommand } from "../core/process-utils.ts";
 
 type CommandRunner = (
@@ -106,6 +107,8 @@ export function validateResumePdf(path: string): void {
  * @returns Generated resume PDF path.
  */
 export async function buildResume(options: BuildResumeOptions = {}): Promise<string> {
+  if (options.sourceDirectory === undefined) validateSourceInputSelection();
+
   const sourceDirectory = options.sourceDirectory ?? sourceInputDirs.resume;
   const buildDirectory = options.buildDirectory ?? artifactPaths.resumeBuildDir;
   const outputPdf = options.outputPdf ?? artifactPaths.resumePdf;
