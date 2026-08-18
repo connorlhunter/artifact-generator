@@ -79,6 +79,7 @@ Project coverage folders are excluded from the generator bundle. Each applicatio
 | Publish source inputs      | `bun run artifacts:source:publish`          |
 | Render and open docs       | `bun run docs:render:open -- <project>`     |
 | Render docs                | `bun run docs:render -- <project>`          |
+| Render docs PDF            | `bun run docs:render:pdf -- <project>`      |
 | Render diagrams            | `bun run diagrams:render -- <project>`      |
 | Render and open diagrams   | `bun run diagrams:render:open -- <project>` |
 | Generate coverage          | `bun run test:coverage`                     |
@@ -97,6 +98,8 @@ Docs and diagram commands require one project slug. Root pipeline docs are inclu
 bun run docs:render:open -- cipher
 bun run diagrams:render -- connor-hunter
 ```
+
+`docs:render:pdf` rebuilds the selected preview before printing it, so it also works when `dist/docs-preview/` does not exist yet.
 
 Pass `--github owner/repo` to add source links to a docs preview.
 
@@ -132,7 +135,7 @@ The project uses Bun for installs, scripts, and tests. TypeScript is compiled wi
 
 `bun run verify` runs the dependency audit, formatting check, lint, typecheck, test suite, and local CodeQL security scan. The committed pre-commit and pre-push hooks run the same command. GitHub Actions defers this local scan to the repository's hosted CodeQL checks.
 
-The local scan covers JavaScript, TypeScript, and GitHub Actions with the security-extended suites. Its reviewed baseline contains only the path and file-race findings tracked in [#39](https://github.com/connorlhunter/artifact-generator/issues/39); new or stale fingerprints fail verification.
+The local scan covers JavaScript, TypeScript, and GitHub Actions with the security-extended suites. Its reviewed baseline contains only the remaining path findings tracked in [#39](https://github.com/connorlhunter/artifact-generator/issues/39); new or stale fingerprints fail verification.
 
 Dependency pins and temporary release-age exceptions live in `dependency-policy.toml`. Keep the exception table empty unless a pinned urgent update cannot wait for the configured one-week release age.
 

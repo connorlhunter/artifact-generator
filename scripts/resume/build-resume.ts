@@ -1,4 +1,4 @@
-import { cpSync, existsSync, readFileSync, statSync } from "node:fs";
+import { cpSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { TOML } from "bun";
 import type { CommandContext, CommandOptions, CommandOutput } from "../core/command-types.ts";
@@ -48,16 +48,25 @@ interface ResumeProjectConfig {
  * @returns Names used by Tectonic's generated PDF path.
  */
 export function readResumeProjectConfig(sourceDirectory: string): ResumeProjectConfig {
-  if (!existsSync(sourceDirectory) || !statSync(sourceDirectory).isDirectory()) {
+  let sourceStats: ReturnType<typeof statSync>;
+  try {
+    sourceStats = statSync(sourceDirectory);
+  } catch {
+    throw new Error(`Missing resume source directory: ${sourceDirectory}`);
+  }
+  if (!sourceStats.isDirectory()) {
     throw new Error(`Missing resume source directory: ${sourceDirectory}`);
   }
 
   const configPath = join(sourceDirectory, "Tectonic.toml");
-  if (!existsSync(configPath) || !statSync(configPath).isFile()) {
+  let configContents: string;
+  try {
+    configContents = readFileSync(configPath, "utf8");
+  } catch {
     throw new Error(`Missing resume source config: ${configPath}`);
   }
 
-  const config = TOML.parse(readFileSync(configPath, "utf8")) as unknown as TectonicProjectConfig;
+  const config = TOML.parse(configContents) as unknown as TectonicProjectConfig;
   const documentName = nonEmptyString(config.doc?.name);
   const pdfOutput = config.output?.find((output) => output.type === "pdf");
   const outputName = nonEmptyString(pdfOutput?.name);
@@ -78,15 +87,18 @@ export function readResumeProjectConfig(sourceDirectory: string): ResumeProjectC
  * @param path - PDF path to validate.
  */
 export function validateResumePdf(path: string): void {
-  if (!existsSync(path)) {
+  let pdf: Buffer;
+  try {
+    pdf = readFileSync(path);
+  } catch {
     throw new Error(`Resume build did not produce ${path}`);
   }
 
-  if (statSync(path).size < 5) {
+  if (pdf.length < 5) {
     throw new Error(`Resume build produced an empty PDF: ${path}`);
   }
 
-  if (readFileSync(path).subarray(0, 5).toString("ascii") !== "%PDF-") {
+  if (pdf.subarray(0, 5).toString("ascii") !== "%PDF-") {
     throw new Error(`Resume build produced an invalid PDF: ${path}`);
   }
 }
