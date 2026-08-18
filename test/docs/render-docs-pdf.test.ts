@@ -12,6 +12,7 @@ import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { publicDocsUrl, renderDocsPdf } from "../../scripts/docs/render-docs-pdf.ts";
 import { renderDocsPreviewPdf } from "../../scripts/docs/render-docs-preview-pdf.ts";
+import { sourceInputDirs } from "../../scripts/core/script-constants.ts";
 
 describe("renderDocsPdf", () => {
   const originalCwd = process.cwd();
@@ -83,6 +84,9 @@ describe("renderDocsPdf", () => {
     const icon = join(tempDir, "tmp/s3-inputs/assets/icons/docs-fixture/mark.svg");
     mkdirSync(dirname(icon), { recursive: true });
     cpSync(join(tempDir, "icons/docs-fixture/mark.svg"), icon);
+    const manifest = join(sourceInputDirs.manifests, "content-manifest.json");
+    mkdirSync(dirname(manifest), { recursive: true });
+    writeFileSync(manifest, JSON.stringify({ lastUpdated: "2026-08-18" }));
     process.chdir(tempDir);
 
     expect(existsSync("dist/docs-preview/index.html")).toBe(false);

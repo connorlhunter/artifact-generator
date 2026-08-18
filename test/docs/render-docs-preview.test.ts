@@ -27,6 +27,9 @@ describe("render docs preview", () => {
       "icons/docs-fixture/mark.svg",
       `${sourceInputDirs.icons}/docs-fixture/mark.svg`,
     );
+    const manifest = `${sourceInputDirs.manifests}/content-manifest.json`;
+    mkdirSync(dirname(manifest), { recursive: true });
+    writeFileSync(manifest, JSON.stringify({ lastUpdated: "2026-08-18" }));
   });
 
   afterEach(() => {
@@ -80,6 +83,7 @@ describe("render docs preview", () => {
     expect(html).toContain("data-doc-search-input");
     expect(html).toContain("Search documentation");
     expect(html).toContain("data-nav-count");
+    expect(html).toContain("Updated August 18, 2026");
     expect(html).toContain('class="nav-panel"');
     expect(html).toContain('class="page-outline"');
     expect(html).toContain("data-outline-links");

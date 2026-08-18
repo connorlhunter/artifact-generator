@@ -12,6 +12,7 @@
     "audit": "bun run deps:policy:check && bun audit --audit-level=high",
     "artifacts:assemble": "bun scripts/publish/assemble-site-artifacts.ts",
     "artifacts:build": "bun run test:coverage && bun scripts/publish/build-site-artifacts.ts",
+    "artifacts:last-updated": "bun scripts/publish/update-content-manifest.ts",
     "artifacts:publish": "bun scripts/publish/publish-site-artifacts.ts",
     "artifacts:ship": "bun run test:coverage && bun scripts/publish/ship-site-artifacts.ts",
     "artifacts:source:publish": "bun scripts/publish/publish-source-inputs.ts",
