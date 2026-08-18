@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { renderDiagramPreviewPage } from "../../scripts/docs/preview/diagram-page-html.ts";
+import { renderPageHtml } from "../../scripts/docs/preview/page-html.ts";
 import {
   buildNavHeadingLinks,
   syncHeadingLinkState,
@@ -49,6 +50,23 @@ function fakeHeadingLink(hash: string): FakeHeadingLink {
 }
 
 describe("docs preview assets", () => {
+  test("shows the artifact update date beneath the document count", () => {
+    const html = renderPageHtml({
+      articlesHtml: "<article>Docs</article>",
+      clientScript: "",
+      documentCount: 3,
+      lastUpdated: "August 18, 2026",
+      navigationHtml: "",
+      pageTitle: "Project docs",
+      projectIcon: null,
+      styles: "",
+      title: "Project docs",
+    });
+
+    expect(html).toContain('class="nav-count" data-nav-count aria-live="polite">3 documents');
+    expect(html).toContain('class="nav-updated">Updated August 18, 2026');
+  });
+
   test("renders diagram viewer pages with project favicon links", () => {
     const html = renderDiagramPreviewPage({
       href: "diagrams/artifact-generator/example.html",

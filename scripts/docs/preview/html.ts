@@ -13,6 +13,10 @@ import { renderNavigation } from "./navigation-html.ts";
 import type { DocsPreviewOptions } from "./options.ts";
 import { renderPageHtml } from "./page-html.ts";
 import { loadDocsPreviewStyles } from "./styles.ts";
+import {
+  formatArtifactUpdatedDate,
+  readArtifactUpdatedDate,
+} from "../../publish/update-content-manifest.ts";
 
 /**
  * Rendered preview HTML plus static assets required beside it.
@@ -62,6 +66,7 @@ export async function renderDocsPreviewPage(
       articlesHtml: renderedDocs.map((article) => article.html).join(""),
       clientScript,
       documentCount: orderedDocs.length,
+      lastUpdated: formatArtifactUpdatedDate(readArtifactUpdatedDate()),
       navigationHtml: renderNavigation(orderedDocs),
       pageTitle: title.endsWith("Preview") ? title : `${title} Preview`,
       projectIcon: primaryProjectIconAsset(orderedDocs),

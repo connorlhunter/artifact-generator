@@ -18,6 +18,10 @@ export interface DocsPreviewPageHtml {
    */
   documentCount: number;
   /**
+   * Last source-publication date shown below the document count.
+   */
+  lastUpdated: string;
+  /**
    * Rendered sidebar navigation.
    */
   navigationHtml: string;
@@ -78,6 +82,7 @@ ${themeBootstrapScript()}
                 </button>
               </div>
               <p class="nav-count" data-nav-count aria-live="polite">${page.documentCount} documents</p>
+              <p class="nav-updated">Updated ${escapeHtml(page.lastUpdated)}</p>
             </div>
             <label class="nav-search">
               <span>Search</span>
