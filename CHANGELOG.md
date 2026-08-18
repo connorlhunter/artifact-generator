@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.4 - 2026-08-18
+
+### Fixed
+
+- Rebuild the selected documentation preview before rendering its PDF export.
+- Read resume configuration and generated PDF contents from a single filesystem snapshot to resolve the tracked file-race findings.
+- Remove the resolved resume file-race entries from the local CodeQL baseline; the reviewed local-path findings remain tracked separately.
+
 ## 1.5.3 - 2026-08-14
 
 ### Added
