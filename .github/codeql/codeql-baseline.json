@@ -3,18 +3,6 @@
   "issue": "https://github.com/connorlhunter/artifact-generator/issues/39",
   "findings": [
     {
-      "fingerprint": "primaryLocationLineHash:17d087efea4d6281:1|primaryLocationStartColumnFingerprint:4",
-      "language": "javascript-typescript",
-      "path": "scripts/resume/build-resume.ts",
-      "ruleId": "js/file-system-race"
-    },
-    {
-      "fingerprint": "primaryLocationLineHash:861d50748fd273ff:1|primaryLocationStartColumnFingerprint:26",
-      "language": "javascript-typescript",
-      "path": "scripts/resume/build-resume.ts",
-      "ruleId": "js/file-system-race"
-    },
-    {
       "fingerprint": "primaryLocationLineHash:f9c7a2a9b28d9b5:1|primaryLocationStartColumnFingerprint:10",
       "language": "javascript-typescript",
       "path": "scripts/core/bun-native-fs.ts",
@@ -214,24 +202,6 @@
     },
     {
       "fingerprint": "primaryLocationLineHash:74ae7c26493d4754:1|primaryLocationStartColumnFingerprint:46",
-      "language": "javascript-typescript",
-      "path": "scripts/resume/build-resume.ts",
-      "ruleId": "js/path-injection"
-    },
-    {
-      "fingerprint": "primaryLocationLineHash:861d50748fd273ff:1|primaryLocationStartColumnFingerprint:39",
-      "language": "javascript-typescript",
-      "path": "scripts/resume/build-resume.ts",
-      "ruleId": "js/path-injection"
-    },
-    {
-      "fingerprint": "primaryLocationLineHash:c58ebfd21f90d903:1|primaryLocationStartColumnFingerprint:16",
-      "language": "javascript-typescript",
-      "path": "scripts/resume/build-resume.ts",
-      "ruleId": "js/path-injection"
-    },
-    {
-      "fingerprint": "primaryLocationLineHash:c58ebfd21f90d903:1|primaryLocationStartColumnFingerprint:41",
       "language": "javascript-typescript",
       "path": "scripts/resume/build-resume.ts",
       "ruleId": "js/path-injection"

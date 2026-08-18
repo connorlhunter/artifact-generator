@@ -47,17 +47,22 @@ interface ResumeProjectConfig {
  * @param sourceDirectory - Selected resume source directory.
  * @returns Names used by Tectonic's generated PDF path.
  */
-export function readResumeProjectConfig(sourceDirectory: string): ResumeProjectConfig {
+export async function readResumeProjectConfig(
+  sourceDirectory: string,
+): Promise<ResumeProjectConfig> {
   if (!existsSync(sourceDirectory) || !statSync(sourceDirectory).isDirectory()) {
     throw new Error(`Missing resume source directory: ${sourceDirectory}`);
   }
 
   const configPath = join(sourceDirectory, "Tectonic.toml");
-  if (!existsSync(configPath) || !statSync(configPath).isFile()) {
+  let configContents: string;
+  try {
+    configContents = await Bun.file(configPath).text();
+  } catch {
     throw new Error(`Missing resume source config: ${configPath}`);
   }
 
-  const config = TOML.parse(readFileSync(configPath, "utf8")) as unknown as TectonicProjectConfig;
+  const config = TOML.parse(configContents) as unknown as TectonicProjectConfig;
   const documentName = nonEmptyString(config.doc?.name);
   const pdfOutput = config.output?.find((output) => output.type === "pdf");
   const outputName = nonEmptyString(pdfOutput?.name);
@@ -78,15 +83,18 @@ export function readResumeProjectConfig(sourceDirectory: string): ResumeProjectC
  * @param path - PDF path to validate.
  */
 export function validateResumePdf(path: string): void {
-  if (!existsSync(path)) {
+  let pdf: Buffer;
+  try {
+    pdf = readFileSync(path);
+  } catch {
     throw new Error(`Resume build did not produce ${path}`);
   }
 
-  if (statSync(path).size < 5) {
+  if (pdf.length < 5) {
     throw new Error(`Resume build produced an empty PDF: ${path}`);
   }
 
-  if (readFileSync(path).subarray(0, 5).toString("ascii") !== "%PDF-") {
+  if (pdf.subarray(0, 5).toString("ascii") !== "%PDF-") {
     throw new Error(`Resume build produced an invalid PDF: ${path}`);
   }
 }
@@ -102,7 +110,7 @@ export async function buildResume(options: BuildResumeOptions = {}): Promise<str
   const buildDirectory = options.buildDirectory ?? artifactPaths.resumeBuildDir;
   const outputPdf = options.outputPdf ?? artifactPaths.resumePdf;
   const runner = options.runner ?? runCommand;
-  const project = readResumeProjectConfig(sourceDirectory);
+  const project = await readResumeProjectConfig(sourceDirectory);
 
   if (resolve(sourceDirectory) === resolve(buildDirectory)) {
     throw new Error("Resume build directory must be separate from the selected source directory.");
