@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.5 - 2026-08-18
+
+### Fixed
+
+- Restrict local source input selection to staged bundles under the repository-controlled cache.
+- Reject symlinks before source files are rendered, copied, or published.
+- Remove the resolved path-injection findings from the local CodeQL baseline; the scan now requires zero findings.
+
 ## 1.5.4 - 2026-08-18
 
 ### Fixed
