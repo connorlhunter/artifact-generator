@@ -40,7 +40,15 @@ describe("assemble site artifacts", () => {
     writeFixtureFile(`${sourceInputDirs.manifests}/content-manifest.json`, "{}");
     writeFixtureFile(
       `${sourceInputDirs.manifests}/project-artifacts.json`,
-      JSON.stringify({ projects: { example: { docsPath: "docs/example/index.html" } } }),
+      JSON.stringify({
+        projects: {
+          example: { docsPath: "docs/example/index.html" },
+          "artifact-generator": {
+            coveragePath: "projects/artifact-generator/coverage/index.html",
+            docsPath: "docs/artifact-generator/index.html",
+          },
+        },
+      }),
     );
     writeFixtureFile(`${sourceInputDirs.profile}/profile.md`, "---\n{}\n---");
     writeFixtureFile(`${sourceInputDirs.projects}/example.md`, "---\n{}\n---");
@@ -71,7 +79,7 @@ describe("assemble site artifacts", () => {
       JSON.parse(readFileSync("dist/site-artifacts/manifests/project-artifacts.json", "utf8")) as {
         projects: { example: { docsPath: string; docsPdfPath: string } };
       },
-    ).toEqual({
+    ).toMatchObject({
       projects: {
         example: { docsPath: "docs/example/index.html", docsPdfPath: "docs/example/index.pdf" },
       },
@@ -92,6 +100,22 @@ describe("assemble site artifacts", () => {
     expect(existsSync("dist/site-artifacts/projects/artifact-generator/coverage/index.pdf")).toBe(
       true,
     );
+    expect(
+      JSON.parse(readFileSync("dist/site-artifacts/manifests/project-artifacts.json", "utf8")),
+    ).toMatchObject({
+      projects: {
+        "artifact-generator": {
+          coveragePages: [
+            {
+              id: "typescript",
+              label: "TypeScript",
+              path: "projects/artifact-generator/coverage/index.html",
+              pdfPath: "projects/artifact-generator/coverage/index.pdf",
+            },
+          ],
+        },
+      },
+    });
     expect(existsSync("dist/site-assets/icons/example/mark.svg")).toBe(true);
     expect(existsSync("dist/site-assets/resume/connor-hunter-resume.pdf")).toBe(true);
   });
