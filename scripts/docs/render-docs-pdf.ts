@@ -94,7 +94,7 @@ export async function renderDocsPdf(
 /* istanbul ignore next */
 if (isEntrypoint(import.meta.url)) {
   try {
-    await renderDocsPdf(process.argv[2], process.argv[3], process.argv[4]);
+    await renderDocsPdf();
   } catch (error) {
     logError(error instanceof Error ? error.message : String(error));
     process.exit(1);

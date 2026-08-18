@@ -45,19 +45,26 @@ The default source root is `tmp/s3-inputs/`. The source buckets and publish dest
 
 ### Local Bundle
 
-Pass one explicit `local=<path>` argument to read a different bundle without syncing S3 first:
+Stage an alternate bundle beneath the ignored `tmp/local-source-bundles/` directory, then pass its lowercase bundle name. The generator reads only that controlled directory; it does not accept arbitrary filesystem paths.
 
 ```bash
-bun run docs:render:open -- artifact-generator local=/absolute/path/to/source-inputs
-bun run diagrams:render -- connor-hunter local=/absolute/path/to/source-inputs
-bun run resume:build -- local=/absolute/path/to/source-inputs
-bun run artifacts:build -- local=/absolute/path/to/source-inputs
-bun run artifacts:ship -- local=/absolute/path/to/source-inputs
+mkdir -p tmp/local-source-bundles/review
+rsync -a /absolute/path/to/source-inputs/ tmp/local-source-bundles/review/
 ```
 
-`local=<path>` overrides `SOURCE_INPUT_CACHE_DIR`. Relative paths resolve from this repository. Quote the full argument when the path contains spaces. The generator does not guess folder locations; the selected directory must use the source shape above.
+Pass one explicit `local=<bundle>` argument to read the staged bundle without syncing S3 first:
 
-`artifacts:source:publish -- local=<path>` uploads that bundle to the configured source buckets. It validates every required folder before the first upload.
+```bash
+bun run docs:render:open -- artifact-generator local=review
+bun run diagrams:render -- connor-hunter local=review
+bun run resume:build -- local=review
+bun run artifacts:build -- local=review
+bun run artifacts:ship -- local=review
+```
+
+Bundle names use lowercase letters, numbers, and hyphens. The selected tree must use the source shape above and cannot contain symlinks.
+
+`artifacts:source:publish -- local=<bundle>` uploads that bundle to the configured source buckets. It validates every required folder before the first upload.
 
 ## Outputs
 
@@ -89,7 +96,7 @@ Project coverage folders are excluded from the generator bundle. Each applicatio
 | Build publish bundles      | `bun run artifacts:build`                   |
 | Publish generated bundles  | `bun run artifacts:publish`                 |
 | Build and publish bundles  | `bun run artifacts:ship`                    |
-| Build from a local bundle  | `bun run artifacts:build -- local=<path>`   |
+| Build from a local bundle  | `bun run artifacts:build -- local=<bundle>` |
 | Run the full quality check | `bun run verify`                            |
 
 Docs and diagram commands require one project slug. Root pipeline docs are included with the `artifact-generator` preview.
@@ -135,7 +142,7 @@ The project uses Bun for installs, scripts, and tests. TypeScript is compiled wi
 
 `bun run verify` runs the dependency audit, formatting check, lint, typecheck, test suite, and local CodeQL security scan. The committed pre-commit and pre-push hooks run the same command. GitHub Actions defers this local scan to the repository's hosted CodeQL checks.
 
-The local scan covers JavaScript, TypeScript, and GitHub Actions with the security-extended suites. Its reviewed baseline contains only the remaining path findings tracked in [#39](https://github.com/connorlhunter/artifact-generator/issues/39); new or stale fingerprints fail verification.
+The local scan covers JavaScript, TypeScript, and GitHub Actions with the security-extended suites. Its checked-in baseline is empty; any finding fails verification.
 
 Dependency pins and temporary release-age exceptions live in `dependency-policy.toml`. Keep the exception table empty unless a pinned urgent update cannot wait for the configured one-week release age.
 
