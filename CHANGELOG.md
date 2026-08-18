@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.6 - 2026-08-18
+
+### Added
+
+- Stamp the source content manifest with the current UTC date during artifact builds.
+
+### Changed
+
+- Show the publication date beneath the document count in generated documentation previews.
+
 ## 1.5.5 - 2026-08-18
 
 ### Fixed
