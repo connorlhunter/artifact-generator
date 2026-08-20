@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6.0 - 2026-08-20
+
+### Added
+
+- Stamp rendered diagram SVGs with the shared source-publication date.
+- Generate a PDF alongside the Artifact Generator coverage report and publish it as the download target.
+
+### Changed
+
+- Show the shared source-publication date in coverage reports and regenerate them after artifact builds update it.
+
 ## 1.5.6 - 2026-08-18
 
 ### Added
