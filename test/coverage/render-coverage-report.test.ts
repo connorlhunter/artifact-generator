@@ -51,7 +51,7 @@ describe("render coverage report", () => {
     ]);
     expect(html).toContain("Artifact Generator Coverage");
     expect(html).toContain(
-      '<time datetime="2026-08-18T18:42:31.123Z">Aug 18, 2026 at 6:42 PM UTC</time>',
+      '<time datetime="2026-08-18T18:42:31.123Z">Aug 18, 2026</time>',
     );
     expect(html).toContain('data-scheme="atlas"');
     expect(html).toContain("connorhunter.theme.scheme");
@@ -97,7 +97,7 @@ describe("render coverage report", () => {
 
     expect(readFileSync(outputPath, "utf8")).toContain("Artifact Generator Coverage");
     expect(readFileSync(outputPath, "utf8")).toContain(
-      '<time datetime="2026-08-18T18:42:31.123Z">Aug 18, 2026 at 6:42 PM UTC</time>',
+      '<time datetime="2026-08-18T18:42:31.123Z">Aug 18, 2026</time>',
     );
   });
 

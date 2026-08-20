@@ -83,7 +83,7 @@ ${themeBootstrapScript()}
                 </button>
               </div>
               <p class="nav-count" data-nav-count aria-live="polite">${page.documentCount} documents</p>
-              <p class="nav-updated">Latest document update <time datetime="${escapeHtml(page.lastUpdated)}">${escapeHtml(formatUpdatedDate(page.lastUpdated))}</time></p>
+              <p class="nav-updated">Updated <time datetime="${escapeHtml(page.lastUpdated)}">${escapeHtml(formatUpdatedDate(page.lastUpdated))}</time></p>
             </div>
             <label class="nav-search">
               <span>Search</span>
