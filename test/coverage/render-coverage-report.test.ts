@@ -38,7 +38,7 @@ describe("render coverage report", () => {
 
   test("parses lcov metrics and renders coverage html", () => {
     const files = parseLcov(sampleLcov);
-    const html = renderCoverageHtml(files);
+    const html = renderCoverageHtml(files, "2026-08-18");
 
     expect(files).toEqual([
       {
@@ -49,6 +49,7 @@ describe("render coverage report", () => {
       },
     ]);
     expect(html).toContain("Artifact Generator Coverage");
+    expect(html).toContain('<time datetime="2026-08-18">August 18, 2026</time>');
     expect(html).toContain('data-scheme="atlas"');
     expect(html).toContain("connorhunter.theme.scheme");
     expect(html).toContain('message.type.endsWith(messageSuffix)');
@@ -65,11 +66,18 @@ describe("render coverage report", () => {
     tempDir = mkdtempSync(join(tmpdir(), "coverage-report-"));
     const lcovPath = join(tempDir, "lcov.info");
     const outputPath = join(tempDir, "index.html");
+    const manifestPath = join(tempDir, "content-manifest.json");
     writeFileSync(lcovPath, passingLcov);
+    writeFileSync(manifestPath, JSON.stringify({ lastUpdated: "2026-08-18" }));
 
-    await expect(renderCoverageReport(lcovPath, outputPath)).resolves.toBe(outputPath);
+    await expect(
+      renderCoverageReport(lcovPath, outputPath, undefined, { manifestPath }),
+    ).resolves.toBe(outputPath);
 
     expect(readFileSync(outputPath, "utf8")).toContain("Artifact Generator Coverage");
+    expect(readFileSync(outputPath, "utf8")).toContain(
+      '<time datetime="2026-08-18">August 18, 2026</time>',
+    );
   });
 
   test("fails when global coverage is below configured thresholds", async () => {
@@ -77,11 +85,32 @@ describe("render coverage report", () => {
     tempDir = mkdtempSync(join(tmpdir(), "coverage-report-"));
     const lcovPath = join(tempDir, "lcov.info");
     const outputPath = join(tempDir, "index.html");
+    const manifestPath = join(tempDir, "content-manifest.json");
     writeFileSync(lcovPath, sampleLcov);
+    writeFileSync(manifestPath, JSON.stringify({ lastUpdated: "2026-08-18" }));
 
-    await expect(renderCoverageReport(lcovPath, outputPath)).rejects.toThrow(
-      "Coverage threshold failed",
-    );
+    await expect(
+      renderCoverageReport(lcovPath, outputPath, undefined, { manifestPath }),
+    ).rejects.toThrow("Coverage threshold failed");
     expect(readFileSync(outputPath, "utf8")).toContain("Artifact Generator Coverage");
+  });
+
+  test("requires a valid shared publication date", async () => {
+    tempDir = mkdtempSync(join(tmpdir(), "coverage-report-"));
+    const lcovPath = join(tempDir, "lcov.info");
+    const outputPath = join(tempDir, "index.html");
+    const manifestPath = join(tempDir, "content-manifest.json");
+    writeFileSync(lcovPath, passingLcov);
+    writeFileSync(manifestPath, JSON.stringify({}));
+
+    await expect(
+      renderCoverageReport(lcovPath, outputPath, undefined, { manifestPath }),
+    ).rejects.toThrow("missing lastUpdated");
+
+    writeFileSync(manifestPath, JSON.stringify({ lastUpdated: "August 18" }));
+
+    await expect(
+      renderCoverageReport(lcovPath, outputPath, undefined, { manifestPath }),
+    ).rejects.toThrow("invalid lastUpdated");
   });
 });
