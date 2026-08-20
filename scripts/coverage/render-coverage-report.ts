@@ -3,10 +3,7 @@ import { ensureDirectory, readText, writeText } from "../core/bun-native-fs.ts";
 import { artifactPaths } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logCaughtError, logSuccess } from "../core/script-logger.ts";
-import {
-  formatArtifactUpdatedDate,
-  readArtifactUpdatedDate,
-} from "../publish/update-content-manifest.ts";
+import { validateUpdatedDate } from "../core/versioned-artifact-metadata.ts";
 
 interface CoverageMetric {
   covered: number;
@@ -32,13 +29,13 @@ export interface CoverageThresholds {
 }
 
 /**
- * Optional paths used to render a coverage report outside the default source bundle.
+ * Optional project-owned coverage publication metadata.
  */
 export interface RenderCoverageReportOptions {
   /**
-   * Content manifest that supplies the shared publication date.
+   * ISO publication timestamp supplied by this project's coverage workflow.
    */
-  readonly manifestPath?: string;
+  readonly updatedAt?: string;
 }
 
 const defaultCoverageThresholds: CoverageThresholds = {
@@ -158,6 +155,55 @@ function escapeHtml(value: string): string {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+/**
+ * Normalizes an Artifact Generator coverage publication time to ISO UTC.
+ *
+ * @param value - Candidate timestamp.
+ * @returns Canonical ISO UTC timestamp.
+ */
+export function coverageUpdatedAt(value: string): string {
+  const isoTimestampPattern =
+    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u;
+  const timestamp = new Date(value);
+
+  if (!isoTimestampPattern.test(value) || Number.isNaN(timestamp.getTime())) {
+    throw new Error(`Invalid coverage publication date: ${value}`);
+  }
+
+  try {
+    validateUpdatedDate(value.slice(0, 10), "coverage publication date");
+  } catch {
+    throw new Error(`Invalid coverage publication date: ${value}`);
+  }
+
+  return timestamp.toISOString();
+}
+
+/** Formats the timestamp displayed in the coverage header and PDF. */
+function coverageUpdatedAtLabel(value: string): string {
+  const date = new Date(value);
+  const month = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ][date.getUTCMonth()];
+  const hour = date.getUTCHours();
+  const displayHour = hour % 12 || 12;
+  const minute = String(date.getUTCMinutes()).padStart(2, "0");
+  const period = hour < 12 ? "AM" : "PM";
+
+  return `${month} ${date.getUTCDate()}, ${date.getUTCFullYear()} at ${displayHour}:${minute} ${period} UTC`;
 }
 
 function metricCell(metric: CoverageMetric): string {
@@ -404,13 +450,13 @@ function coverageThemeScript(): string {
  * Renders a compact HTML coverage report from parsed LCOV records.
  *
  * @param {CoverageFile[]} files - Coverage records.
- * @param {string} lastUpdated - Shared source-publication date in ISO calendar form.
+ * @param {string} updatedAt - Project-owned coverage publication timestamp.
  * @returns {string} Standalone HTML report.
  */
-export function renderCoverageHtml(files: CoverageFile[], lastUpdated: string): string {
+export function renderCoverageHtml(files: CoverageFile[], updatedAt: string): string {
   const total = totals(files);
   const rows = [total, ...files].map(fileRow).join("\n");
-  const updatedLabel = formatArtifactUpdatedDate(lastUpdated);
+  const publicationTimestamp = coverageUpdatedAt(updatedAt);
 
   return `<!doctype html>
 <html data-scheme="atlas" lang="en">
@@ -562,7 +608,7 @@ export function renderCoverageHtml(files: CoverageFile[], lastUpdated: string): 
       <div>
         <h1>Artifact Generator Coverage</h1>
         <p>Bun test coverage generated from the Artifact Generator test suite.</p>
-        <p>Updated <time datetime="${escapeHtml(lastUpdated)}">${escapeHtml(updatedLabel)}</time></p>
+        <p>Updated <time datetime="${escapeHtml(publicationTimestamp)}">${escapeHtml(coverageUpdatedAtLabel(publicationTimestamp))}</time></p>
       </div>
     </header>
     <div class="table-wrap">
@@ -591,7 +637,7 @@ export function renderCoverageHtml(files: CoverageFile[], lastUpdated: string): 
  * @param {string} lcovPath - LCOV input path.
  * @param {string} outputPath - HTML output path.
  * @param {CoverageThresholds} thresholds - Minimum accepted global coverage values.
- * @param {RenderCoverageReportOptions} options - Source manifest location override.
+ * @param {RenderCoverageReportOptions} options - Project-owned publication date override.
  * @returns {Promise<string>} Written HTML path.
  */
 export async function renderCoverageReport(
@@ -600,10 +646,10 @@ export async function renderCoverageReport(
   thresholds: CoverageThresholds = defaultCoverageThresholds,
   options: RenderCoverageReportOptions = {},
 ): Promise<string> {
-  const lastUpdated = readArtifactUpdatedDate(options.manifestPath);
+  const updatedAt = options.updatedAt ?? new Date().toISOString();
   const files = parseLcov(await readText(lcovPath));
   ensureDirectory(dirname(outputPath));
-  await writeText(outputPath, renderCoverageHtml(files, lastUpdated));
+  await writeText(outputPath, renderCoverageHtml(files, updatedAt));
   assertCoverageThresholds(files, thresholds);
   logSuccess(`Rendered HTML coverage report: ${outputPath}`);
   return outputPath;

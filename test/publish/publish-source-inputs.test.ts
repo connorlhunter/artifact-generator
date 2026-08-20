@@ -1,20 +1,30 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import {
-  publishSourceInputs,
-  sourcePublishPlans,
-} from "../../scripts/publish/publish-source-inputs.ts";
-import { sourceInputDirs, sourceInputRoot } from "../../scripts/core/script-constants.ts";
+import { afterAll, afterEach, describe, expect, spyOn, test } from "bun:test";
+import { createIsolatedSourceInputs } from "../resources/isolated-source-inputs.ts";
 import {
   hiddenSourcePathExcludeArgs,
   isHiddenSourcePath,
 } from "../../scripts/publish/source-input-exclusions.ts";
 
+const originalCwd = process.cwd();
+const isolatedSourceInputs = createIsolatedSourceInputs();
+process.chdir(isolatedSourceInputs.workspace);
+const { sourceInputDirs, sourceInputRoot } = await import("../../scripts/core/script-constants.ts");
+const { publishSourceInputs, sourcePublishPlans } =
+  await import("../../scripts/publish/publish-source-inputs.ts");
+process.chdir(originalCwd);
+
+if (sourceInputRoot !== isolatedSourceInputs.sourceInputRoot) {
+  throw new Error(`Source input test root was not isolated: ${sourceInputRoot}`);
+}
+
 describe("publish source inputs", () => {
   afterEach(() => {
-    rmSync(sourceInputRoot, { force: true, recursive: true });
+    isolatedSourceInputs.reset(sourceInputRoot);
   });
+
+  afterAll(() => isolatedSourceInputs.dispose());
 
   test("builds source publish plans from source buckets", () => {
     const plans = sourcePublishPlans({

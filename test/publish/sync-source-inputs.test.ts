@@ -1,12 +1,25 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { sourceInputRoot } from "../../scripts/core/script-constants.ts";
-import { sourceSyncPlans, syncSourceInputs } from "../../scripts/publish/sync-source-inputs.ts";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { afterAll, afterEach, describe, expect, spyOn, test } from "bun:test";
+import { createIsolatedSourceInputs } from "../resources/isolated-source-inputs.ts";
+
+const originalCwd = process.cwd();
+const isolatedSourceInputs = createIsolatedSourceInputs();
+process.chdir(isolatedSourceInputs.workspace);
+const { sourceInputRoot } = await import("../../scripts/core/script-constants.ts");
+const { sourceSyncPlans, syncSourceInputs } =
+  await import("../../scripts/publish/sync-source-inputs.ts");
+process.chdir(originalCwd);
+
+if (sourceInputRoot !== isolatedSourceInputs.sourceInputRoot) {
+  throw new Error(`Source input test root was not isolated: ${sourceInputRoot}`);
+}
 
 describe("sync source inputs", () => {
   afterEach(() => {
-    rmSync(sourceInputRoot, { force: true, recursive: true });
+    isolatedSourceInputs.reset(sourceInputRoot);
   });
+
+  afterAll(() => isolatedSourceInputs.dispose());
 
   test("builds source sync plans from the shared folder map", () => {
     const plans = sourceSyncPlans({

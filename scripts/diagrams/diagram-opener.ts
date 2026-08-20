@@ -5,6 +5,7 @@ import {
   failedResults,
   isOverviewDiagram,
 } from "./diagram-utils.ts";
+import { diagramSourcePath } from "./diagram-metadata.ts";
 import { openDefaultFile } from "../core/file-opener.ts";
 import {
   type FailureDetails,
@@ -82,7 +83,7 @@ function exitForOpenFailures(failures: PromiseRejectedResult[]): never {
  * @returns {boolean} Whether the file is part of the priority open prefix.
  */
 function isPriorityOpenFile(file: string): boolean {
-  const sourcePath = file.replace(/\.svg$/, ".mmd");
+  const sourcePath = diagramSourcePath(file);
   return sourcePath.endsWith("diagram-style-key.mmd") || isOverviewDiagram(sourcePath);
 }
 

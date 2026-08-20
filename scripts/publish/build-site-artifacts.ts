@@ -20,7 +20,6 @@ import {
   copySharedPublishInputs,
   publishOutputs,
 } from "./assemble-site-artifacts.ts";
-import { writeArtifactUpdatedDate } from "./update-content-manifest.ts";
 
 const projectManifestPath = `${sourceInputDirs.manifests}/project-artifacts.json`;
 
@@ -53,7 +52,6 @@ export function projectSlugsFromManifest(manifestPath = projectManifestPath): st
  */
 export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void> {
   validateSourceInputSelection();
-  writeArtifactUpdatedDate();
   const commandArgs = sourceInputCommandArgs(docsArgs);
   const projectSlugs = projectSlugsFromManifest();
 

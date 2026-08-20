@@ -1,17 +1,20 @@
 import type { DiagramJob } from "../../scripts/diagrams/diagram-types.ts";
-import { diagramPaths } from "./docs.constants.ts";
+import { diagramMetadata, diagramOutputPaths, diagramPaths } from "./docs.constants.ts";
 
 export const diagramJobs: DiagramJob[] = [
   {
     input: diagramPaths.projectOverview,
-    output: diagramPaths.projectOverview.replace(/\.mmd$/, ".svg"),
+    output: diagramOutputPaths.projectOverview,
+    ...diagramMetadata.projectOverview,
   },
   {
     input: diagramPaths.projectDiagram,
-    output: diagramPaths.projectDiagram.replace(/\.mmd$/, ".svg"),
+    output: diagramOutputPaths.projectDiagram,
+    ...diagramMetadata.projectDiagram,
   },
   {
     input: diagramPaths.nestedDiagram,
-    output: diagramPaths.nestedDiagram.replace(/\.mmd$/, ".svg"),
+    output: diagramOutputPaths.nestedDiagram,
+    ...diagramMetadata.nestedDiagram,
   },
 ];

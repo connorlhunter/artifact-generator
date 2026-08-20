@@ -3,6 +3,7 @@ import { dirname, join, relative } from "node:path";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { repoDirs, sharedDiagramInputs, sourceInputDirs } from "../core/script-constants.ts";
+import { diagramOutputPath, readDiagramMetadata } from "./diagram-metadata.ts";
 import type { DiagramJob } from "./diagram-types.ts";
 
 /**
@@ -165,12 +166,15 @@ export function getDiagramRoots(args: string[]): string[] {
  * Builds one Mermaid render job from an input path.
  *
  * @param {string} input - Mermaid source path.
- * @returns {{ input: string, output: string }} Mermaid render job.
+ * @returns Mermaid render job with source-owned version metadata.
  */
 function diagramJob(input: string): DiagramJob {
+  const metadata = readDiagramMetadata(input);
+
   return {
     input,
-    output: input.replace(/\.mmd$/, ".svg"),
+    output: diagramOutputPath(input, metadata),
+    ...metadata,
   };
 }
 
@@ -184,6 +188,20 @@ function existingGlobalDiagramInputs(): string[] {
 }
 
 /**
+ * Returns true when a Mermaid source belongs to the configured artifact input.
+ *
+ * @param input - Mermaid source path.
+ * @returns Whether the input is under the configured diagrams directory.
+ */
+function isConfiguredDiagramInput(input: string): boolean {
+  const inputRelative = relative(diagramRoot, input);
+
+  return (
+    inputRelative !== "" && inputRelative !== ".." && !inputRelative.startsWith(`..${path.sep}`)
+  );
+}
+
+/**
  * Adds global diagrams to a discovered diagram list and removes duplicates.
  *
  * @param {string[]} inputs - Discovered Mermaid source paths.
@@ -191,6 +209,7 @@ function existingGlobalDiagramInputs(): string[] {
  */
 function withGlobalDiagrams(inputs: string[]): string[] {
   if (inputs.length === 0) return [];
+  if (!inputs.some(isConfiguredDiagramInput)) return inputs;
 
   return uniqueStrings([...existingGlobalDiagramInputs(), ...inputs]);
 }

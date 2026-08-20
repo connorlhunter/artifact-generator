@@ -8,15 +8,11 @@ type RunCommand = (
 ) => Promise<{ stdout: string; stderr: string }>;
 
 const runCommand = mock<RunCommand>();
-const readArtifactUpdatedDate = mock<() => string>();
-const stampRenderedDiagram = mock<(output: string, lastUpdated: string) => void>();
+const stampRenderedDiagram =
+  mock<(output: string, metadata: { lastUpdated: string; version: string }) => void>();
 
 mock.module("../../scripts/core/process-utils.ts", () => ({
   runCommand,
-}));
-
-mock.module("../../scripts/publish/update-content-manifest.ts", () => ({
-  readArtifactUpdatedDate,
 }));
 
 mock.module("../../scripts/diagrams/stamp-diagram.ts", () => ({
@@ -28,12 +24,10 @@ const { runPhase } = await import("../../scripts/diagrams/diagram-runner.ts");
 describe("diagram runner", () => {
   beforeEach(() => {
     runCommand.mockResolvedValue({ stdout: "", stderr: "" });
-    readArtifactUpdatedDate.mockReturnValue("2026-08-18");
   });
 
   afterEach(() => {
     runCommand.mockReset();
-    readArtifactUpdatedDate.mockReset();
     stampRenderedDiagram.mockReset();
     mock.restore();
   });
@@ -61,16 +55,17 @@ describe("diagram runner", () => {
         output: diagramJobs[0]!.output,
       }),
     );
-    expect(readArtifactUpdatedDate).toHaveBeenCalledTimes(1);
-    expect(stampRenderedDiagram).toHaveBeenCalledWith(diagramJobs[0]!.output, "2026-08-18");
+    expect(stampRenderedDiagram).toHaveBeenCalledWith(diagramJobs[0]!.output, {
+      lastUpdated: diagramJobs[0]!.lastUpdated,
+      version: diagramJobs[0]!.version,
+    });
   });
 
-  test("does not read or stamp the temporary validation SVG", async () => {
+  test("does not stamp the temporary validation SVG", async () => {
     spyOn(console, "log").mockImplementation(() => undefined);
 
     await runPhase("validate", [diagramJobs[0]!]);
 
-    expect(readArtifactUpdatedDate).not.toHaveBeenCalled();
     expect(stampRenderedDiagram).not.toHaveBeenCalled();
   });
 

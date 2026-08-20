@@ -50,12 +50,12 @@ function fakeHeadingLink(hash: string): FakeHeadingLink {
 }
 
 describe("docs preview assets", () => {
-  test("shows the artifact update date beneath the document count", () => {
+  test("shows the latest document update date beneath the document count", () => {
     const html = renderPageHtml({
       articlesHtml: "<article>Docs</article>",
       clientScript: "",
       documentCount: 3,
-      lastUpdated: "August 18, 2026",
+      lastUpdated: "2026-08-18",
       navigationHtml: "",
       pageTitle: "Project docs",
       projectIcon: null,
@@ -64,7 +64,9 @@ describe("docs preview assets", () => {
     });
 
     expect(html).toContain('class="nav-count" data-nav-count aria-live="polite">3 documents');
-    expect(html).toContain('class="nav-updated">Updated August 18, 2026');
+    expect(html).toContain(
+      'class="nav-updated">Latest document update <time datetime="2026-08-18">August 18, 2026</time>',
+    );
   });
 
   test("renders diagram viewer pages with project favicon links", () => {

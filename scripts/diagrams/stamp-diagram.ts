@@ -1,10 +1,19 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { formatArtifactUpdatedDate } from "../publish/update-content-manifest.ts";
+import {
+  formatUpdatedDate,
+  validateArtifactVersion,
+  validateUpdatedDate,
+  type VersionedArtifactMetadata,
+} from "../core/versioned-artifact-metadata.ts";
 
-const footerHeight = 32;
-const footerInset = 12;
-const stampId = "artifact-last-updated";
-const averageStampCharacterWidth = 6.5;
+const stampId = "artifact-version";
+const footerHeightRatio = 0.08;
+const footerInsetRatio = 0.03;
+const fontSizeRatio = 0.03;
+const minimumFooterHeight = 32;
+const minimumFooterInset = 12;
+const minimumFontSize = 12;
+const averageStampCharacterWidth = 0.55;
 
 interface SvgViewBox {
   height: number;
@@ -13,27 +22,46 @@ interface SvgViewBox {
   y: number;
 }
 
+interface StampMetrics {
+  footerHeight: number;
+  footerInset: number;
+  fontSize: number;
+}
+
 /**
- * Adds the shared artifact publication date below a rendered Mermaid diagram.
+ * Adds a source-owned version and publication date below a rendered Mermaid diagram.
  *
  * @param svg - Rendered SVG document.
- * @param lastUpdated - ISO calendar date from the source content manifest.
- * @returns SVG with a visible update stamp and room for its footer.
+ * @param metadata - Version and date declared by the Mermaid source.
+ * @returns SVG with a visible metadata stamp and room for its footer.
  */
-export function stampDiagramSvg(svg: string, lastUpdated: string): string {
+export function stampDiagramSvg(svg: string, metadata: VersionedArtifactMetadata): string {
   const rootTagMatch = /<svg\b[^>]*>/u.exec(svg);
   if (rootTagMatch === null) throw new Error("Diagram SVG is missing its root element.");
 
   const rootTag = rootTagMatch[0];
   const viewBox = svgViewBox(rootTag);
-  const viewBoxValue = [viewBox.x, viewBox.y, viewBox.width, viewBox.height + footerHeight].join(
-    " ",
-  );
-  const label = "Updated " + formatArtifactUpdatedDate(lastUpdated);
-  const stamp = diagramStamp(viewBox, label, lastUpdated);
+  const version = validateArtifactVersion(metadata.version, "diagram version");
+  const lastUpdated = validateUpdatedDate(metadata.lastUpdated, "diagram lastUpdated");
+  const metrics = stampMetrics(viewBox);
+  const viewBoxValue = [
+    viewBox.x,
+    viewBox.y,
+    viewBox.width,
+    viewBox.height + metrics.footerHeight,
+  ].join(" ");
+  const label = `v${version} · Updated ${formatUpdatedDate(lastUpdated)}`;
+  const stamp = diagramStamp(viewBox, metrics, label, version, lastUpdated);
   const updatedRootTag = rootTag
     .replace(/\bviewBox\s*=\s*(["'])([^"']+)\1/u, 'viewBox="' + viewBoxValue + '"')
-    .replace(/>$/u, ' data-artifact-last-updated="' + escapeXml(lastUpdated) + '">');
+    .replace(
+      />$/u,
+      ' data-artifact-last-updated="' +
+        escapeXml(lastUpdated) +
+        '" data-artifact-version="' +
+        escapeXml(version) +
+        '">',
+    );
 
   if (!/<\/svg>\s*$/u.test(svg)) throw new Error("Diagram SVG is missing its closing element.");
 
@@ -44,10 +72,10 @@ export function stampDiagramSvg(svg: string, lastUpdated: string): string {
  * Stamps a rendered Mermaid SVG in place.
  *
  * @param output - Rendered SVG file to update.
- * @param lastUpdated - ISO calendar date from the source content manifest.
+ * @param metadata - Version and date declared by the Mermaid source.
  */
-export function stampRenderedDiagram(output: string, lastUpdated: string): void {
-  writeFileSync(output, stampDiagramSvg(readFileSync(output, "utf8"), lastUpdated));
+export function stampRenderedDiagram(output: string, metadata: VersionedArtifactMetadata): void {
+  writeFileSync(output, stampDiagramSvg(readFileSync(output, "utf8"), metadata));
 }
 
 function svgViewBox(rootTag: string): SvgViewBox {
@@ -71,13 +99,32 @@ function svgViewBox(rootTag: string): SvgViewBox {
   return { height, width, x, y };
 }
 
-function diagramStamp(viewBox: SvgViewBox, label: string, lastUpdated: string): string {
-  const horizontalInset = Math.min(footerInset, viewBox.width / 4);
-  const x = viewBox.x + viewBox.width - horizontalInset;
-  const y = viewBox.y + viewBox.height + footerHeight - footerInset;
-  const availableTextWidth = viewBox.width - horizontalInset * 2;
+function stampMetrics(viewBox: SvgViewBox): StampMetrics {
+  const footerInset = Math.min(
+    Math.max(viewBox.width * footerInsetRatio, minimumFooterInset),
+    viewBox.width / 4,
+  );
+
+  return {
+    fontSize: Math.max(viewBox.width * fontSizeRatio, minimumFontSize),
+    footerHeight: Math.max(viewBox.width * footerHeightRatio, minimumFooterHeight),
+    footerInset,
+  };
+}
+
+function diagramStamp(
+  viewBox: SvgViewBox,
+  metrics: StampMetrics,
+  label: string,
+  version: string,
+  lastUpdated: string,
+): string {
+  const footerY = viewBox.y + viewBox.height;
+  const x = viewBox.x + viewBox.width - metrics.footerInset;
+  const y = footerY + metrics.footerHeight / 2;
+  const availableTextWidth = viewBox.width - metrics.footerInset * 2;
   const textLength =
-    label.length * averageStampCharacterWidth > availableTextWidth
+    label.length * metrics.fontSize * averageStampCharacterWidth > availableTextWidth
       ? ' textLength="' + availableTextWidth + '" lengthAdjust="spacingAndGlyphs"'
       : "";
 
@@ -86,13 +133,25 @@ function diagramStamp(viewBox: SvgViewBox, label: string, lastUpdated: string): 
     stampId +
     '" data-artifact-last-updated="' +
     escapeXml(lastUpdated) +
+    '" data-artifact-version="' +
+    escapeXml(version) +
     '" aria-label="' +
     escapeXml(label) +
-    '" role="note"><text x="' +
+    '" role="note"><rect x="' +
+    viewBox.x +
+    '" y="' +
+    footerY +
+    '" width="' +
+    viewBox.width +
+    '" height="' +
+    metrics.footerHeight +
+    '" fill="#111827"/><text x="' +
     x +
     '" y="' +
     y +
-    '" text-anchor="end" fill="#667085" font-family="Arial, sans-serif" font-size="12"' +
+    '" text-anchor="end" dominant-baseline="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="' +
+    metrics.fontSize +
+    '" font-weight="700"' +
     textLength +
     ">" +
     escapeXml(label) +

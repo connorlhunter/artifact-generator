@@ -23,7 +23,7 @@ describe("diagram opener", () => {
   test("opens rendered diagram files", async () => {
     spyOn(console, "log").mockImplementation(() => undefined);
 
-    await openRenderedDiagrams(diagramJobs.map((job) => job.input));
+    await openRenderedDiagrams(diagramJobs.map((job) => job.output));
 
     expect(openDefaultFile).toHaveBeenCalledTimes(diagramJobs.length);
   });

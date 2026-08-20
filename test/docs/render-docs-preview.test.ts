@@ -1,13 +1,8 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { docsPreviewOutput } from "../../scripts/docs/docs-utils.ts";
-import { sourceInputDirs, sourceInputRoot } from "../../scripts/core/script-constants.ts";
-import {
-  parseDocsPreviewOptions,
-  renderDocsPreview,
-} from "../../scripts/docs/render-docs-preview.ts";
+import { afterAll, afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import { createIsolatedSourceInputs } from "../resources/isolated-source-inputs.ts";
 import {
   markdownPaths,
   missingPreviewPath,
@@ -16,29 +11,40 @@ import {
   repoFixtureRoot,
 } from "../resources/docs.constants.ts";
 
+const originalCwd = process.cwd();
+const isolatedSourceInputs = createIsolatedSourceInputs();
+process.chdir(isolatedSourceInputs.workspace);
+const { sourceInputDirs, sourceInputRoot } = await import("../../scripts/core/script-constants.ts");
+const { docsPreviewOutput } = await import("../../scripts/docs/docs-utils.ts");
+const { parseDocsPreviewOptions, renderDocsPreview } =
+  await import("../../scripts/docs/render-docs-preview.ts");
+process.chdir(originalCwd);
+
+if (sourceInputRoot !== isolatedSourceInputs.sourceInputRoot) {
+  throw new Error(`Source input test root was not isolated: ${sourceInputRoot}`);
+}
+
 describe("render docs preview", () => {
-  const originalCwd = process.cwd();
   const repoFixturePath = resolve(originalCwd, repoFixtureRoot);
 
   beforeEach(() => {
-    rmSync(sourceInputRoot, { force: true, recursive: true });
+    isolatedSourceInputs.reset(sourceInputRoot);
     process.chdir(repoFixturePath);
     copyFixtureFile(
       "icons/docs-fixture/mark.svg",
       `${sourceInputDirs.icons}/docs-fixture/mark.svg`,
     );
-    const manifest = `${sourceInputDirs.manifests}/content-manifest.json`;
-    mkdirSync(dirname(manifest), { recursive: true });
-    writeFileSync(manifest, JSON.stringify({ lastUpdated: "2026-08-18" }));
   });
 
   afterEach(() => {
     process.chdir(originalCwd);
     rmSync(resolve(repoFixturePath, "dist"), { force: true, recursive: true });
     rmSync(resolve(repoFixturePath, "tmp"), { force: true, recursive: true });
-    rmSync(sourceInputRoot, { force: true, recursive: true });
+    isolatedSourceInputs.reset(sourceInputRoot);
     mock.restore();
   });
+
+  afterAll(() => isolatedSourceInputs.dispose());
 
   test("renders selected markdown docs to a browser preview", async () => {
     const log = spyOn(console, "log").mockImplementation(() => undefined);
@@ -50,14 +56,14 @@ describe("render docs preview", () => {
       "dist",
       "docs-preview",
       "diagrams",
-      "diagram-style-key.svg",
+      "diagram-style-key-v1.0.0-2026-08-18.svg",
     );
     const copiedDiagramPage = resolve(
       repoFixturePath,
       "dist",
       "docs-preview",
       "diagrams",
-      "diagram-style-key.html",
+      "diagram-style-key-v1.0.0-2026-08-18.html",
     );
     const copiedIcon = resolve(
       repoFixturePath,
@@ -73,7 +79,7 @@ describe("render docs preview", () => {
     expect(existsSync(copiedDiagram)).toBe(true);
     expect(existsSync(copiedDiagramPage)).toBe(true);
     const diagramPageHtml = readFileSync(copiedDiagramPage, "utf8");
-    expect(diagramPageHtml).toContain('href="diagram-style-key.svg"');
+    expect(diagramPageHtml).toContain('href="diagram-style-key-v1.0.0-2026-08-18.svg"');
     expect(diagramPageHtml).toContain('href="../icons/docs-fixture/mark.svg"');
     expect(existsSync(copiedIcon)).toBe(true);
     expect(html).toContain(markdownPaths.fixtureDocsIndex);
@@ -83,7 +89,18 @@ describe("render docs preview", () => {
     expect(html).toContain("data-doc-search-input");
     expect(html).toContain("Search documentation");
     expect(html).toContain("data-nav-count");
-    expect(html).toContain("Updated August 18, 2026");
+    expect(html).toContain("Latest document update");
+    expect(html).toContain(
+      'Latest document update <time datetime="2026-08-19">August 19, 2026</time>',
+    );
+    const indexArticle =
+      /<article\s+id="doc-docs-fixture-index-md"[\s\S]*?<\/article>/u.exec(html)?.[0] ?? "";
+    const guideArticle =
+      /<article\s+id="doc-docs-fixture-nested-guide-md"[\s\S]*?<\/article>/u.exec(html)?.[0] ?? "";
+    expect(indexArticle).toContain('class="doc-version">v1.0.0</span>');
+    expect(indexArticle).toContain('<time datetime="2026-08-18">August 18, 2026</time>');
+    expect(guideArticle).toContain('class="doc-version">v1.2.0</span>');
+    expect(guideArticle).toContain('<time datetime="2026-08-19">August 19, 2026</time>');
     expect(html).toContain('class="nav-panel"');
     expect(html).toContain('class="page-outline"');
     expect(html).toContain("data-outline-links");
@@ -184,14 +201,16 @@ describe("render docs preview", () => {
     expect(html).toContain('content: "Close source";');
     expect(html).toContain("<h2>Index</h2>");
     expect(html).toContain('<p class="doc-eyebrow">Docs Fixture</p>');
-    expect(html).toContain("<pre><code># Fixture Index");
+    expect(html).toContain(
+      "<pre><code>&lt;!-- artifact-generator:version=1.0.0 lastUpdated=2026-08-18 --&gt;",
+    );
     expect(html).not.toContain('href="source/');
     expect(html).not.toContain(pathToFileURL(resolve(markdownPaths.fixtureDocsIndex)).href);
     expect(html).toContain("#doc-docs-fixture-nested-guide-md");
     expect(html).toContain("<h3>Docs Fixture</h3>");
     expect(html).toContain(">Index</span>");
     expect(html).toContain(
-      '<a target="_blank" rel="noopener" href="diagrams/diagram-style-key.html">Diagram Key</a>',
+      '<a target="_blank" rel="noopener" href="diagrams/diagram-style-key-v1.0.0-2026-08-18.html">Diagram Key</a>',
     );
     expect(html).toContain(
       '<a target="_blank" rel="noopener" href="https://example.com/project">Fixture Project</a>',
@@ -261,6 +280,7 @@ describe("render docs preview", () => {
     writeFileSync(
       source,
       [
+        "<!-- artifact-generator:version=1.0.0 lastUpdated=2026-08-18 -->",
         "# Security",
         "",
         '<img src="x" onerror="alert(1)">',

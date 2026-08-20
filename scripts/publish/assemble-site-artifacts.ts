@@ -12,6 +12,12 @@ import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constan
 import { ensureDirectory } from "../core/bun-native-fs.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import {
+  diagramOutputPath,
+  diagramSourcePath,
+  isVersionedDiagramOutput,
+  readDiagramMetadata,
+} from "../diagrams/diagram-metadata.ts";
+import {
   sourceInputCommandArgs,
   validateSourceInputSelection,
 } from "../core/source-input-selection.ts";
@@ -37,8 +43,10 @@ interface ProjectArtifactManifestEntry {
   coveragePath?: string;
   coveragePages?: CoveragePage[];
   coveragePdfPath?: string;
+  diagramPaths?: string[];
   docsPath: string;
   docsPdfPath?: string;
+  overviewDiagramPath?: string;
 }
 
 interface ProjectArtifactManifest {
@@ -148,7 +156,7 @@ function copyPath(plan: CopyPlan): void {
  * @returns Number of copied SVG diagrams.
  */
 export function copyRenderedDiagrams(): number {
-  const svgFiles = walkFiles(sourceInputDirs.diagrams).filter((path) => path.endsWith(".svg"));
+  const svgFiles = walkFiles(sourceInputDirs.diagrams).filter(isVersionedDiagramOutput);
 
   for (const source of svgFiles) {
     const target = join(
@@ -215,6 +223,51 @@ export function addGeneratedPdfPaths(
   }
 
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+/**
+ * Replaces legacy diagram output paths in the published manifest with the
+ * versioned SVG names generated from each Mermaid source declaration.
+ *
+ * @param manifestPath - Published project artifact manifest to update.
+ */
+export function addVersionedDiagramPaths(
+  manifestPath = join(publishOutputs.siteArtifacts, "manifests", "project-artifacts.json"),
+): void {
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifest;
+
+  for (const project of Object.values(manifest.projects)) {
+    if (project.diagramPaths) {
+      project.diagramPaths = project.diagramPaths.map(versionedPublishedDiagramPath);
+    }
+
+    if (project.overviewDiagramPath) {
+      project.overviewDiagramPath = versionedPublishedDiagramPath(project.overviewDiagramPath);
+    }
+  }
+
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+/**
+ * Resolves one public diagram path to the name produced from its Mermaid source.
+ *
+ * @param diagramPath - Public logical SVG path stored in the project manifest.
+ * @returns Versioned public logical SVG path.
+ */
+function versionedPublishedDiagramPath(diagramPath: string): string {
+  const prefix = `${repoDirs.diagrams}/`;
+
+  if (!diagramPath.startsWith(prefix) || !diagramPath.endsWith(".svg")) {
+    throw new Error(`Project manifest diagram path must be an SVG below ${prefix}: ${diagramPath}`);
+  }
+
+  const sourceRelativePath = diagramSourcePath(diagramPath.slice(prefix.length));
+  const sourcePath = join(sourceInputDirs.diagrams, sourceRelativePath);
+  const outputPath = diagramOutputPath(sourcePath, readDiagramMetadata(sourcePath));
+  const outputRelativePath = relative(sourceInputDirs.diagrams, outputPath).replaceAll("\\", "/");
+
+  return `${prefix}${outputRelativePath}`;
 }
 
 /**
@@ -298,6 +351,7 @@ export function copySharedPublishInputs(): void {
   }
 
   addGeneratedPdfPaths();
+  addVersionedDiagramPaths();
 }
 
 /**
