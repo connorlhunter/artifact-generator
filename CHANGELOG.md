@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Simplified the documentation and coverage update labels to concise date-only wording.
+- Simplified coverage update labels and removed the duplicate aggregate date from docs navigation.
 - Reduced the height and type scale of the rendered diagram metadata footer.
 
 ## 1.7.0 - 2026-08-20

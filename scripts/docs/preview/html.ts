@@ -62,7 +62,6 @@ export async function renderDocsPreviewPage(
       articlesHtml: renderedDocs.map((article) => article.html).join(""),
       clientScript,
       documentCount: orderedDocs.length,
-      lastUpdated: latestDocumentUpdate(renderedDocs),
       navigationHtml: renderNavigation(orderedDocs),
       pageTitle: title.endsWith("Preview") ? title : `${title} Preview`,
       projectIcon: primaryProjectIconAsset(orderedDocs),
@@ -71,23 +70,6 @@ export async function renderDocsPreviewPage(
     }),
     projectIconAssets: projectIconAssetsForDocs(orderedDocs),
   };
-}
-
-/**
- * Returns the newest source-owned update date in a rendered docs bundle.
- *
- * @param articles - Rendered document articles.
- * @returns Latest ISO date.
- */
-function latestDocumentUpdate(articles: RenderedDocArticle[]): string {
-  const latest = articles
-    .map((article) => article.lastUpdated)
-    .sort()
-    .at(-1);
-
-  if (latest === undefined) throw new Error("Rendered docs are missing update metadata.");
-
-  return latest;
 }
 
 /**

@@ -654,12 +654,6 @@ nav h1 {
   font-size: 0.75rem;
 }
 
-.nav-updated {
-  margin: 0.125rem 0 0;
-  color: var(--muted);
-  font-size: 0.8125rem;
-}
-
 .nav-search {
   display: block;
   margin: 0 0 1rem;
