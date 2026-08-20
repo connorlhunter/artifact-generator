@@ -5,8 +5,10 @@ import {
   groupByProject,
   validateOutputPath,
 } from "./diagram-utils.ts";
+import { stampRenderedDiagram } from "./stamp-diagram.ts";
 import { runCommand } from "../core/process-utils.ts";
 import { executables } from "../core/script-constants.ts";
+import { readArtifactUpdatedDate } from "../publish/update-content-manifest.ts";
 import {
   type FailureDetails,
   logErrorHeading,
@@ -31,13 +33,19 @@ type DiagramFailure = CommandFailure & {
  *
  * @param {string} input - Mermaid source path.
  * @param {string} output - SVG destination path.
+ * @param lastUpdated - Source publication date added to rendered SVG output.
  * @returns {Promise<{ input: string; output: string }>} Resolves when Mermaid succeeds.
  */
-async function runMermaid(input: string, output: string): Promise<DiagramJob> {
+async function runMermaid(
+  input: string,
+  output: string,
+  lastUpdated?: string,
+): Promise<DiagramJob> {
   await runCommand(executables.bun, ["x", "mmdc", "-i", input, "-o", output], {
     input,
     output,
   });
+  if (lastUpdated !== undefined) stampRenderedDiagram(output, lastUpdated);
   return { input, output };
 }
 
@@ -103,10 +111,16 @@ function phaseItems(phase: DiagramPhase, items: DiagramJob[]): DiagramJob[] {
  * Runs Mermaid for every item in a phase.
  *
  * @param {{ input: string; output: string }[]} items - Phase-specific Mermaid jobs.
+ * @param lastUpdated - Source publication date added to rendered SVG output.
  * @returns {Promise<PromiseSettledResult<{ input: string; output: string }>[]>} Phase results.
  */
-function runPhaseItems(items: DiagramJob[]): Promise<PromiseSettledResult<DiagramJob>[]> {
-  return allSettledWithFirstPriority(items, ({ input, output }) => runMermaid(input, output));
+function runPhaseItems(
+  items: DiagramJob[],
+  lastUpdated?: string,
+): Promise<PromiseSettledResult<DiagramJob>[]> {
+  return allSettledWithFirstPriority(items, ({ input, output }) =>
+    runMermaid(input, output, lastUpdated),
+  );
 }
 
 /**
@@ -136,10 +150,11 @@ function logPhaseSuccess(phase: DiagramPhase, count: number): void {
  */
 export async function runPhase(phase: DiagramPhase, items: DiagramJob[]): Promise<void> {
   const itemsForPhase = phaseItems(phase, items);
+  const lastUpdated = phase === "render" ? readArtifactUpdatedDate() : undefined;
 
   logPhaseStart(phase, itemsForPhase);
 
-  const failures = failedResults(await runPhaseItems(itemsForPhase));
+  const failures = failedResults(await runPhaseItems(itemsForPhase, lastUpdated));
 
   if (failures.length === 0) {
     logPhaseSuccess(phase, items.length);
