@@ -65,7 +65,7 @@ describe("docs preview assets", () => {
 
     expect(html).toContain('class="nav-count" data-nav-count aria-live="polite">3 documents');
     expect(html).toContain(
-      'class="nav-updated">Latest document update <time datetime="2026-08-18">August 18, 2026</time>',
+      'class="nav-updated">Updated <time datetime="2026-08-18">August 18, 2026</time>',
     );
   });
 

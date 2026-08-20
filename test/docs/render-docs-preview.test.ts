@@ -89,10 +89,8 @@ describe("render docs preview", () => {
     expect(html).toContain("data-doc-search-input");
     expect(html).toContain("Search documentation");
     expect(html).toContain("data-nav-count");
-    expect(html).toContain("Latest document update");
-    expect(html).toContain(
-      'Latest document update <time datetime="2026-08-19">August 19, 2026</time>',
-    );
+    expect(html).toContain("Updated");
+    expect(html).toContain('Updated <time datetime="2026-08-19">August 19, 2026</time>');
     const indexArticle =
       /<article\s+id="doc-docs-fixture-index-md"[\s\S]*?<\/article>/u.exec(html)?.[0] ?? "";
     const guideArticle =

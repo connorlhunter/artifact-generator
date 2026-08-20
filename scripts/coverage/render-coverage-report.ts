@@ -198,12 +198,7 @@ function coverageUpdatedAtLabel(value: string): string {
     "Nov",
     "Dec",
   ][date.getUTCMonth()];
-  const hour = date.getUTCHours();
-  const displayHour = hour % 12 || 12;
-  const minute = String(date.getUTCMinutes()).padStart(2, "0");
-  const period = hour < 12 ? "AM" : "PM";
-
-  return `${month} ${date.getUTCDate()}, ${date.getUTCFullYear()} at ${displayHour}:${minute} ${period} UTC`;
+  return `${month} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
 }
 
 function metricCell(metric: CoverageMetric): string {

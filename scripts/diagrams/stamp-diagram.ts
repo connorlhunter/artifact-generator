@@ -7,12 +7,12 @@ import {
 } from "../core/versioned-artifact-metadata.ts";
 
 const stampId = "artifact-version";
-const footerHeightRatio = 0.08;
-const footerInsetRatio = 0.03;
-const fontSizeRatio = 0.03;
-const minimumFooterHeight = 32;
-const minimumFooterInset = 12;
-const minimumFontSize = 12;
+const footerHeightRatio = 0.06;
+const footerInsetRatio = 0.024;
+const fontSizeRatio = 0.024;
+const minimumFooterHeight = 24;
+const minimumFooterInset = 10;
+const minimumFontSize = 10;
 const averageStampCharacterWidth = 0.55;
 
 interface SvgViewBox {
