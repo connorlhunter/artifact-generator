@@ -28,7 +28,7 @@
     "format:check": "bun x prettier --check . --ignore-unknown",
     "lint": "bun x eslint .",
     "test": "bun run build && bun test --isolate --timeout 30000",
-    "test:coverage": "bun run build && bun scripts/coverage/clean-coverage.ts && bun test --isolate --coverage --timeout 30000 && bun scripts/coverage/render-coverage-report.ts",
+    "test:coverage": "bun run build && bun scripts/coverage/clean-coverage.ts && bun test --isolate --coverage --timeout 30000 && bun scripts/coverage/render-coverage-report.ts && bun scripts/coverage/render-coverage-pdf.ts",
     "coverage:open": "bun run test:coverage && bun dist/scripts/coverage/open-coverage-report.js",
     "codeql:scan": "bun scripts/security/codeql-scan.ts",
     "docs:render": "bun run build && bun dist/scripts/docs/render-docs-preview.js",

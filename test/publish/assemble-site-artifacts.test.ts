@@ -105,6 +105,7 @@ describe("assemble site artifacts", () => {
     ).toMatchObject({
       projects: {
         "artifact-generator": {
+          coveragePdfPath: "projects/artifact-generator/coverage/index.pdf",
           coveragePages: [
             {
               id: "typescript",

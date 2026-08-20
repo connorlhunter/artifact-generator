@@ -1,6 +1,7 @@
 import { readFileSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import { renderCoveragePdf } from "../coverage/render-coverage-pdf.ts";
+import { renderCoverageReport } from "../coverage/render-coverage-report.ts";
 import { renderDiagrams } from "../diagrams/render-diagrams.ts";
 import { publicDocsUrl, renderDocsPdf } from "../docs/render-docs-pdf.ts";
 import { renderDocsPreview } from "../docs/render-docs-preview.ts";
@@ -63,6 +64,7 @@ export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void>
   cleanPublishOutputs();
   logHeading("Building project artifact bundle", { count: projectSlugs.length });
 
+  await renderCoverageReport();
   await renderCoveragePdf();
   await buildResume();
   await renderDiagrams(projectSlugs);

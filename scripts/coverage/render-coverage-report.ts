@@ -3,6 +3,10 @@ import { ensureDirectory, readText, writeText } from "../core/bun-native-fs.ts";
 import { artifactPaths } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logCaughtError, logSuccess } from "../core/script-logger.ts";
+import {
+  formatArtifactUpdatedDate,
+  readArtifactUpdatedDate,
+} from "../publish/update-content-manifest.ts";
 
 interface CoverageMetric {
   covered: number;
@@ -25,6 +29,16 @@ export interface CoverageThresholds {
    * Minimum global line coverage percentage.
    */
   lines: number;
+}
+
+/**
+ * Optional paths used to render a coverage report outside the default source bundle.
+ */
+export interface RenderCoverageReportOptions {
+  /**
+   * Content manifest that supplies the shared publication date.
+   */
+  readonly manifestPath?: string;
 }
 
 const defaultCoverageThresholds: CoverageThresholds = {
@@ -390,11 +404,13 @@ function coverageThemeScript(): string {
  * Renders a compact HTML coverage report from parsed LCOV records.
  *
  * @param {CoverageFile[]} files - Coverage records.
+ * @param {string} lastUpdated - Shared source-publication date in ISO calendar form.
  * @returns {string} Standalone HTML report.
  */
-export function renderCoverageHtml(files: CoverageFile[]): string {
+export function renderCoverageHtml(files: CoverageFile[], lastUpdated: string): string {
   const total = totals(files);
   const rows = [total, ...files].map(fileRow).join("\n");
+  const updatedLabel = formatArtifactUpdatedDate(lastUpdated);
 
   return `<!doctype html>
 <html data-scheme="atlas" lang="en">
@@ -546,6 +562,7 @@ export function renderCoverageHtml(files: CoverageFile[]): string {
       <div>
         <h1>Artifact Generator Coverage</h1>
         <p>Bun test coverage generated from the Artifact Generator test suite.</p>
+        <p>Updated <time datetime="${escapeHtml(lastUpdated)}">${escapeHtml(updatedLabel)}</time></p>
       </div>
     </header>
     <div class="table-wrap">
@@ -573,16 +590,20 @@ export function renderCoverageHtml(files: CoverageFile[]): string {
  *
  * @param {string} lcovPath - LCOV input path.
  * @param {string} outputPath - HTML output path.
+ * @param {CoverageThresholds} thresholds - Minimum accepted global coverage values.
+ * @param {RenderCoverageReportOptions} options - Source manifest location override.
  * @returns {Promise<string>} Written HTML path.
  */
 export async function renderCoverageReport(
   lcovPath: string = artifactPaths.coverageLcov,
   outputPath: string = artifactPaths.coverageReport,
   thresholds: CoverageThresholds = defaultCoverageThresholds,
+  options: RenderCoverageReportOptions = {},
 ): Promise<string> {
+  const lastUpdated = readArtifactUpdatedDate(options.manifestPath);
   const files = parseLcov(await readText(lcovPath));
   ensureDirectory(dirname(outputPath));
-  await writeText(outputPath, renderCoverageHtml(files));
+  await writeText(outputPath, renderCoverageHtml(files, lastUpdated));
   assertCoverageThresholds(files, thresholds);
   logSuccess(`Rendered HTML coverage report: ${outputPath}`);
   return outputPath;
