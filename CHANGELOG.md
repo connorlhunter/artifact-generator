@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.7.0 - 2026-08-20
+
+### Added
+
+- Require a canonical semantic version and last-updated date on every Markdown and Mermaid source.
+- Display each document and diagram's own version and update date in generated HTML, PDFs, and SVGs.
+- Publish diagram SVGs with standardized versioned and dated filenames.
+
+### Changed
+
+- Reserve the shared content-manifest date for the site code footer.
+- Generate Artifact Generator coverage HTML and PDF from one project-owned UTC publication timestamp.
+
+### Fixed
+
+- Isolate source-backed tests so they cannot remove the synchronized S3 input cache.
+- Format coverage publication timestamps consistently across supported runtimes.
+
 ## 1.6.0 - 2026-08-20
 
 ### Added
