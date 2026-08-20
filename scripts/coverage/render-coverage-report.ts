@@ -183,16 +183,27 @@ export function coverageUpdatedAt(value: string): string {
 
 /** Formats the timestamp displayed in the coverage header and PDF. */
 function coverageUpdatedAtLabel(value: string): string {
-  const label = new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-    year: "numeric",
-  }).format(new Date(value));
+  const date = new Date(value);
+  const month = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ][date.getUTCMonth()];
+  const hour = date.getUTCHours();
+  const displayHour = hour % 12 || 12;
+  const minute = String(date.getUTCMinutes()).padStart(2, "0");
+  const period = hour < 12 ? "AM" : "PM";
 
-  return `${label} UTC`;
+  return `${month} ${date.getUTCDate()}, ${date.getUTCFullYear()} at ${displayHour}:${minute} ${period} UTC`;
 }
 
 function metricCell(metric: CoverageMetric): string {
