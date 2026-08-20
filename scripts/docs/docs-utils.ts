@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
+import { diagramOutputPath, readDiagramMetadata } from "../diagrams/diagram-metadata.ts";
 import { formatDocLabel, formatDocSectionTitle } from "./docs-labels.ts";
 
 /**
@@ -732,24 +733,26 @@ export function localMermaidTarget(source: MarkdownDoc, href: string): MermaidPr
   if (!targetPath?.endsWith(".mmd")) return null;
 
   const mermaidPath = normalizeRepoPath(join(dirname(source.input), targetPath));
-  const svgPath = mermaidPath.replace(/\.mmd$/, ".svg");
   const mermaidSourcePath = source.sourcePath ? physicalArtifactPath(mermaidPath) : mermaidPath;
+  if (!existsSync(mermaidSourcePath)) return null;
+
+  const svgPath = normalizeRepoPath(
+    diagramOutputPath(mermaidPath, readDiagramMetadata(mermaidSourcePath)),
+  );
   const svgSourcePath = source.sourcePath ? physicalArtifactPath(svgPath) : svgPath;
   const previewSvgPath = normalizeRepoPath(join(dirname(docsPreviewOutput), svgPath));
   const previewPagePath = previewSvgPath.replace(/\.svg$/, ".html");
   const svgHref = normalizeRepoPath(relative(dirname(docsPreviewOutput), previewSvgPath));
 
-  return existsSync(mermaidSourcePath) || existsSync(svgSourcePath)
-    ? {
-        href: normalizeRepoPath(relative(dirname(docsPreviewOutput), previewPagePath)),
-        pageTarget: previewPagePath,
-        projectIcon: projectIconAsset(source.project),
-        source: svgSourcePath,
-        svgHref,
-        target: previewSvgPath,
-        title: formatDocLabel(basename(svgPath, ".svg")),
-      }
-    : null;
+  return {
+    href: normalizeRepoPath(relative(dirname(docsPreviewOutput), previewPagePath)),
+    pageTarget: previewPagePath,
+    projectIcon: projectIconAsset(source.project),
+    source: svgSourcePath,
+    svgHref,
+    target: previewSvgPath,
+    title: formatDocLabel(basename(mermaidPath, ".mmd")),
+  };
 }
 
 /**

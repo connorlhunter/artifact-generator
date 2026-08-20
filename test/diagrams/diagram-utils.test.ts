@@ -14,6 +14,8 @@ import {
 } from "../../scripts/diagrams/diagram-utils.ts";
 import { diagramJobs } from "../resources/docs.mock.ts";
 import {
+  diagramMetadata,
+  diagramOutputPaths,
   diagramPaths,
   diagramsFixtureRoot,
   repoFixtureProjectName,
@@ -36,21 +38,37 @@ describe("diagram utils", () => {
     expect(inputs.indexOf(diagramPaths.projectOverview)).toBeLessThan(
       inputs.indexOf(diagramPaths.projectDiagram),
     );
+    expect(diagrams).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          input: diagramPaths.projectDiagram,
+          output: diagramOutputPaths.projectDiagram,
+          ...diagramMetadata.projectDiagram,
+        }),
+      ]),
+    );
     expect(outputDirs(diagramJobs)).toContain(diagramsFixtureRoot + "/project");
     expect(compactName(diagramPaths.projectDiagram)).toBe("flow");
     expect(compactName("")).toBe("");
     expect(isOverviewDiagram(diagramPaths.projectOverview)).toBe(true);
     expect(isOverviewDiagram(diagramPaths.projectDiagram)).toBe(false);
-    expect(validateOutputPath(diagramJobs[0]!.output)).toContain("project-overview.svg");
+    expect(validateOutputPath(diagramJobs[0]!.output)).toContain(
+      "project-overview-v2.1.0-2026-08-17.svg",
+    );
     expect([...groupByProject(diagramJobs).keys()]).toEqual(["test"]);
     expect([
-      ...groupByProject([...diagramJobs, { input: "", output: "empty.svg" }]).keys(),
+      ...groupByProject([
+        ...diagramJobs,
+        { input: "", output: "empty.svg", lastUpdated: "2026-08-18", version: "1.0.0" },
+      ]).keys(),
     ]).toEqual(["test", ""]);
     expect([
       ...groupByProject([
         {
           input: "diagrams/example/example-overview.mmd",
-          output: "diagrams/example/example-overview.svg",
+          output: "diagrams/example/example-overview-v1.0.0-2026-08-18.svg",
+          lastUpdated: "2026-08-18",
+          version: "1.0.0",
         },
       ]).keys(),
     ]).toEqual(["example"]);
@@ -58,7 +76,9 @@ describe("diagram utils", () => {
       ...groupByProject([
         {
           input: `${sourceInputDirs.diagrams}/source-project/source-project-overview.mmd`,
-          output: `${sourceInputDirs.diagrams}/source-project/source-project-overview.svg`,
+          output: `${sourceInputDirs.diagrams}/source-project/source-project-overview-v1.0.0-2026-08-18.svg`,
+          lastUpdated: "2026-08-18",
+          version: "1.0.0",
         },
       ]).keys(),
     ]).toEqual(["source-project"]);

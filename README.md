@@ -43,6 +43,22 @@ Local verification also requires CodeQL CLI 2.26.3 on `PATH`.
 
 The default source root is `tmp/s3-inputs/`. The source buckets and publish destinations are configured in `.env`; use `.env.example` as the reference.
 
+### Versioned docs and diagrams
+
+Every Markdown document and Mermaid diagram owns a strict `major.minor.patch` version and a real ISO calendar date. These comments must be the first line of their source files:
+
+```md
+<!-- artifact-generator:version=1.0.0 lastUpdated=2026-08-18 -->
+```
+
+```text
+%% artifact-generator:version=1.0.0 lastUpdated=2026-08-18
+```
+
+Rendered document headers and diagram stamps show both values. Diagram outputs use `<name>-v<major>.<minor>.<patch>-<YYYY-MM-DD>.svg`; the build resolves those filenames into docs links and the public project manifest. Update only the source file whose content changed, and bump its version/date together.
+
+`content-manifest.json:lastUpdated` is reserved for the portfolio code footer. Artifact builds do not change or reuse it. Coverage has no artifact version; each project publisher creates one UTC publication timestamp and renders its HTML and PDF from that same value.
+
 ### Local Bundle
 
 Stage an alternate bundle beneath the ignored `tmp/local-source-bundles/` directory, then pass its lowercase bundle name. The generator reads only that controlled directory; it does not accept arbitrary filesystem paths.

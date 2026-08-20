@@ -8,7 +8,6 @@ import {
 import { stampRenderedDiagram } from "./stamp-diagram.ts";
 import { runCommand } from "../core/process-utils.ts";
 import { executables } from "../core/script-constants.ts";
-import { readArtifactUpdatedDate } from "../publish/update-content-manifest.ts";
 import {
   type FailureDetails,
   logErrorHeading,
@@ -31,22 +30,20 @@ type DiagramFailure = CommandFailure & {
  * Spawns `mmdc` through Bun and captures stdout/stderr so failures can be
  * reported cleanly after all diagrams in the phase have finished.
  *
- * @param {string} input - Mermaid source path.
- * @param {string} output - SVG destination path.
- * @param lastUpdated - Source publication date added to rendered SVG output.
+ * @param job - Mermaid source and output metadata.
+ * @param output - SVG destination path.
+ * @param stamp - Whether this real render output should receive a metadata stamp.
  * @returns {Promise<{ input: string; output: string }>} Resolves when Mermaid succeeds.
  */
-async function runMermaid(
-  input: string,
-  output: string,
-  lastUpdated?: string,
-): Promise<DiagramJob> {
-  await runCommand(executables.bun, ["x", "mmdc", "-i", input, "-o", output], {
-    input,
+async function runMermaid(job: DiagramJob, output: string, stamp: boolean): Promise<DiagramJob> {
+  await runCommand(executables.bun, ["x", "mmdc", "-i", job.input, "-o", output], {
+    input: job.input,
     output,
   });
-  if (lastUpdated !== undefined) stampRenderedDiagram(output, lastUpdated);
-  return { input, output };
+  if (stamp) {
+    stampRenderedDiagram(output, { lastUpdated: job.lastUpdated, version: job.version });
+  }
+  return { ...job, output };
 }
 
 /**
@@ -101,9 +98,9 @@ function logPhaseFailures(phase: DiagramPhase, failures: PromiseRejectedResult[]
  * @returns {{ input: string; output: string }[]} Jobs for the phase.
  */
 function phaseItems(phase: DiagramPhase, items: DiagramJob[]): DiagramJob[] {
-  return items.map(({ input, output }) => ({
-    input,
-    output: phase === "validate" ? validateOutputPath(output) : output,
+  return items.map((item) => ({
+    ...item,
+    output: phase === "validate" ? validateOutputPath(item.output) : item.output,
   }));
 }
 
@@ -111,16 +108,14 @@ function phaseItems(phase: DiagramPhase, items: DiagramJob[]): DiagramJob[] {
  * Runs Mermaid for every item in a phase.
  *
  * @param {{ input: string; output: string }[]} items - Phase-specific Mermaid jobs.
- * @param lastUpdated - Source publication date added to rendered SVG output.
+ * @param stamp - Whether this phase writes real rendered SVG output.
  * @returns {Promise<PromiseSettledResult<{ input: string; output: string }>[]>} Phase results.
  */
 function runPhaseItems(
   items: DiagramJob[],
-  lastUpdated?: string,
+  stamp: boolean,
 ): Promise<PromiseSettledResult<DiagramJob>[]> {
-  return allSettledWithFirstPriority(items, ({ input, output }) =>
-    runMermaid(input, output, lastUpdated),
-  );
+  return allSettledWithFirstPriority(items, (item) => runMermaid(item, item.output, stamp));
 }
 
 /**
@@ -150,11 +145,10 @@ function logPhaseSuccess(phase: DiagramPhase, count: number): void {
  */
 export async function runPhase(phase: DiagramPhase, items: DiagramJob[]): Promise<void> {
   const itemsForPhase = phaseItems(phase, items);
-  const lastUpdated = phase === "render" ? readArtifactUpdatedDate() : undefined;
 
   logPhaseStart(phase, itemsForPhase);
 
-  const failures = failedResults(await runPhaseItems(itemsForPhase, lastUpdated));
+  const failures = failedResults(await runPhaseItems(itemsForPhase, phase === "render"));
 
   if (failures.length === 0) {
     logPhaseSuccess(phase, items.length);

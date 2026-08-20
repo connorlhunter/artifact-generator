@@ -1,23 +1,27 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import {
-  assembleSiteArtifacts,
-  publishOutputs,
-} from "../../scripts/publish/assemble-site-artifacts.ts";
-import {
-  artifactPaths,
-  sourceInputDirs,
-  sourceInputRoot,
-} from "../../scripts/core/script-constants.ts";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createIsolatedSourceInputs } from "../resources/isolated-source-inputs.ts";
+
+const originalCwd = process.cwd();
+const isolatedSourceInputs = createIsolatedSourceInputs();
+process.chdir(isolatedSourceInputs.workspace);
+const { artifactPaths, sourceInputDirs, sourceInputRoot } =
+  await import("../../scripts/core/script-constants.ts");
+const { assembleSiteArtifacts, publishOutputs } =
+  await import("../../scripts/publish/assemble-site-artifacts.ts");
+process.chdir(originalCwd);
+
+if (sourceInputRoot !== isolatedSourceInputs.sourceInputRoot) {
+  throw new Error(`Source input test root was not isolated: ${sourceInputRoot}`);
+}
 
 describe("assemble site artifacts", () => {
-  const originalCwd = process.cwd();
   let tempDir = "";
 
   beforeEach(() => {
-    rmSync(sourceInputRoot, { force: true, recursive: true });
+    isolatedSourceInputs.reset(sourceInputRoot);
     tempDir = mkdtempSync(join(tmpdir(), "artifact-publish-"));
     process.chdir(tempDir);
   });
@@ -25,24 +29,43 @@ describe("assemble site artifacts", () => {
   afterEach(() => {
     process.chdir(originalCwd);
     rmSync(tempDir, { force: true, recursive: true });
-    rmSync(sourceInputRoot, { force: true, recursive: true });
+    isolatedSourceInputs.reset(sourceInputRoot);
   });
+
+  afterAll(() => isolatedSourceInputs.dispose());
 
   test("copies generated docs, diagrams, content, icons, and resume assets", () => {
     writeFixtureFile("dist/docs-preview/index.html", "<html>docs</html>");
     writeFixtureFile("dist/docs-preview/index.pdf", "%PDF-1.4");
-    writeFixtureFile(`${sourceInputDirs.diagrams}/diagram-style-key.svg`, "<svg>key</svg>");
     writeFixtureFile(
-      `${sourceInputDirs.diagrams}/example/example-overview.svg`,
+      `${sourceInputDirs.diagrams}/diagram-style-key-v1.0.0-2026-08-18.svg`,
+      "<svg>key</svg>",
+    );
+    writeFixtureFile(
+      `${sourceInputDirs.diagrams}/example/example-overview-v2.1.0-2026-08-17.svg`,
       "<svg>example</svg>",
     );
-    writeFixtureFile(`${sourceInputDirs.diagrams}/example/example-overview.mmd`, "flowchart TD");
-    writeFixtureFile(`${sourceInputDirs.manifests}/content-manifest.json`, "{}");
+    writeFixtureFile(
+      `${sourceInputDirs.diagrams}/example/example-overview.svg`,
+      "<svg>legacy</svg>",
+    );
+    writeFixtureFile(
+      `${sourceInputDirs.diagrams}/example/example-overview.mmd`,
+      "%% artifact-generator:version=2.1.0 lastUpdated=2026-08-17\nflowchart TD",
+    );
+    writeFixtureFile(
+      `${sourceInputDirs.manifests}/content-manifest.json`,
+      JSON.stringify({ lastUpdated: "1999-12-31" }),
+    );
     writeFixtureFile(
       `${sourceInputDirs.manifests}/project-artifacts.json`,
       JSON.stringify({
         projects: {
-          example: { docsPath: "docs/example/index.html" },
+          example: {
+            diagramPaths: ["diagrams/example/example-overview.svg"],
+            docsPath: "docs/example/index.html",
+            overviewDiagramPath: "diagrams/example/example-overview.svg",
+          },
           "artifact-generator": {
             coveragePath: "projects/artifact-generator/coverage/index.html",
             docsPath: "docs/artifact-generator/index.html",
@@ -81,14 +104,25 @@ describe("assemble site artifacts", () => {
       },
     ).toMatchObject({
       projects: {
-        example: { docsPath: "docs/example/index.html", docsPdfPath: "docs/example/index.pdf" },
+        example: {
+          diagramPaths: ["diagrams/example/example-overview-v2.1.0-2026-08-17.svg"],
+          docsPath: "docs/example/index.html",
+          docsPdfPath: "docs/example/index.pdf",
+          overviewDiagramPath: "diagrams/example/example-overview-v2.1.0-2026-08-17.svg",
+        },
       },
     });
     expect(
-      readFileSync("dist/site-artifacts/diagrams/example/example-overview.svg", "utf8"),
+      readFileSync(
+        "dist/site-artifacts/diagrams/example/example-overview-v2.1.0-2026-08-17.svg",
+        "utf8",
+      ),
     ).toContain("example");
+    expect(existsSync("dist/site-artifacts/diagrams/example/example-overview.svg")).toBe(false);
     expect(existsSync("dist/site-artifacts/diagrams/example/example-overview.mmd")).toBe(false);
-    expect(existsSync("dist/site-artifacts/manifests/content-manifest.json")).toBe(true);
+    expect(
+      JSON.parse(readFileSync("dist/site-artifacts/manifests/content-manifest.json", "utf8")),
+    ).toEqual({ lastUpdated: "1999-12-31" });
     expect(existsSync("dist/site-artifacts/profile/profile.md")).toBe(true);
     expect(existsSync("dist/site-artifacts/projects/example.md")).toBe(true);
     expect(existsSync("dist/site-artifacts/projects/.local-metadata")).toBe(false);

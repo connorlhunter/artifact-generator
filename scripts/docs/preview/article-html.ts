@@ -10,6 +10,8 @@ import {
   type ProjectIconPreviewAsset,
 } from "../docs-utils.ts";
 import { readText } from "../../core/bun-native-fs.ts";
+import { formatUpdatedDate } from "../../core/versioned-artifact-metadata.ts";
+import { parseDocSource } from "../doc-metadata.ts";
 import { escapeHtml } from "./html-escape.ts";
 import { docEyebrow, docSearchText } from "./labels.ts";
 import { githubSourceUrl, type DocsPreviewOptions } from "./options.ts";
@@ -98,6 +100,10 @@ export interface RenderedDocArticle {
    * Rendered SVG assets needed by this article.
    */
   diagramAssets: MermaidPreviewAsset[];
+  /** ISO date owned by this Markdown source. */
+  lastUpdated: string;
+  /** Strict major.minor.patch version owned by this Markdown source. */
+  version: string;
 }
 
 /**
@@ -113,7 +119,9 @@ export async function renderDocArticle(
   knownIds: Map<string, string>,
   options: DocsPreviewOptions,
 ): Promise<RenderedDocArticle> {
-  const markdown = await readText(markdownSourcePath(doc));
+  const sourcePath = markdownSourcePath(doc);
+  const sourceMarkdown = await readText(sourcePath);
+  const { body: markdown, metadata } = parseDocSource(sourceMarkdown, doc.input);
   const githubUrl = githubSourceUrl(doc, options.github);
   const icon = projectIconAsset(doc.project);
   const diagramAssets: MermaidPreviewAsset[] = [];
@@ -137,6 +145,8 @@ export async function renderDocArticle(
 
   return {
     diagramAssets,
+    lastUpdated: metadata.lastUpdated,
+    version: metadata.version,
     html: `
     <article
       id="${doc.id}"
@@ -151,6 +161,7 @@ export async function renderDocArticle(
           <p class="doc-eyebrow">${escapeHtml(docEyebrow(doc))}</p>
           <h2>${escapeHtml(docLinkLabel(doc))}</h2>
           <p class="doc-path">${escapeHtml(doc.input)}</p>
+          <p class="doc-metadata"><span class="doc-version">v${escapeHtml(metadata.version)}</span><span aria-hidden="true">·</span><span>Updated <time datetime="${escapeHtml(metadata.lastUpdated)}">${escapeHtml(formatUpdatedDate(metadata.lastUpdated))}</time></span></p>
         </div>
         ${githubLinkHtml(githubUrl)}
       </header>
@@ -160,7 +171,7 @@ export async function renderDocArticle(
           <span>Markdown</span>
           <button type="button" data-copy-source>Copy</button>
         </div>
-        <pre><code>${escapeHtml(markdown)}</code></pre>
+        <pre><code>${escapeHtml(sourceMarkdown)}</code></pre>
       </details>
       <div class="doc-body">
         ${body}

@@ -1,7 +1,22 @@
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createIsolatedSourceInputs } from "../resources/isolated-source-inputs.ts";
 import {
+  diagramOutputPaths,
+  diagramPaths,
+  existingPreviewPath,
+  markdownPaths,
+  repoFixtureDocsRoot,
+  repoFixtureProjectName,
+  repoFixtureRoot,
+} from "../resources/docs.constants.ts";
+
+const originalCwd = process.cwd();
+const isolatedSourceInputs = createIsolatedSourceInputs();
+process.chdir(isolatedSourceInputs.workspace);
+const { sourceInputDirs, sourceInputRoot } = await import("../../scripts/core/script-constants.ts");
+const {
   docId,
   docGroupTitle,
   docLinkLabel,
@@ -20,18 +35,13 @@ import {
   primaryProjectIconAsset,
   projectIconAsset,
   projectIconAssetsForDocs,
-} from "../../scripts/docs/docs-utils.ts";
-import { sourceInputDirs, sourceInputRoot } from "../../scripts/core/script-constants.ts";
-import {
-  diagramPaths,
-  existingPreviewPath,
-  markdownPaths,
-  repoFixtureDocsRoot,
-  repoFixtureProjectName,
-  repoFixtureRoot,
-} from "../resources/docs.constants.ts";
+} = await import("../../scripts/docs/docs-utils.ts");
+process.chdir(originalCwd);
 
-const originalCwd = process.cwd();
+if (sourceInputRoot !== isolatedSourceInputs.sourceInputRoot) {
+  throw new Error(`Source input test root was not isolated: ${sourceInputRoot}`);
+}
+
 const repoFixturePath = resolve(originalCwd, repoFixtureRoot);
 const fixtureIndexDoc = {
   id: docId(markdownPaths.fixtureDocsIndex),
@@ -47,7 +57,7 @@ const fixtureMarkdownDocs = [fixtureIndexDoc, fixtureNestedDoc];
 
 describe("docs utils", () => {
   beforeEach(() => {
-    rmSync(sourceInputRoot, { force: true, recursive: true });
+    isolatedSourceInputs.reset(sourceInputRoot);
     process.chdir(repoFixturePath);
     copyFixtureFile(
       "icons/docs-fixture/mark.svg",
@@ -59,8 +69,10 @@ describe("docs utils", () => {
     process.chdir(originalCwd);
     rmSync(resolve(repoFixturePath, "dist"), { force: true, recursive: true });
     rmSync(resolve(repoFixturePath, "tmp"), { force: true, recursive: true });
-    rmSync(sourceInputRoot, { force: true, recursive: true });
+    isolatedSourceInputs.reset(sourceInputRoot);
   });
+
+  afterAll(() => isolatedSourceInputs.dispose());
 
   test("discovers markdown docs from the selected source root", () => {
     const docs = findMarkdownDocs([repoFixtureDocsRoot]);
@@ -374,11 +386,11 @@ describe("docs utils", () => {
       fixtureNestedDoc.id,
     );
     expect(localMermaidTargetHref(fixtureIndexDoc, "../diagrams/diagram-style-key.mmd")).toBe(
-      "diagrams/diagram-style-key.html",
+      "diagrams/diagram-style-key-v1.0.0-2026-08-18.html",
     );
     process.chdir(originalCwd);
     expect(localMermaidTargetHref(fixtureIndexDoc, `../${diagramPaths.projectDiagram}`)).toBe(
-      diagramPaths.projectDiagram.replace(/\.mmd$/, ".html"),
+      diagramOutputPaths.projectDiagram.replace(/\.svg$/, ".html"),
     );
     process.chdir(repoFixturePath);
     expect(localMermaidTargetHref(fixtureIndexDoc, "./missing.mmd")).toBeNull();

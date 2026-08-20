@@ -2,9 +2,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logError, logSuccess } from "../core/script-logger.ts";
+import { isoUpdatedDate, validateUpdatedDate } from "../core/versioned-artifact-metadata.ts";
 
 const contentManifestPath = `${sourceInputDirs.manifests}/content-manifest.json`;
-const datePattern = /^\d{4}-\d{2}-\d{2}$/u;
 
 interface ContentManifest {
   readonly [key: string]: unknown;
@@ -12,58 +12,41 @@ interface ContentManifest {
 }
 
 /**
- * @param date - Publication time to represent in the source manifest.
+ * @param date - Code publication time to represent in the content manifest.
  * @returns An ISO calendar date in UTC.
  */
-export function artifactUpdatedDate(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
-}
-
-/**
- * @param value - ISO calendar date from the source manifest.
- * @returns A concise date label for rendered artifact pages.
- */
-export function formatArtifactUpdatedDate(value: string): string {
-  if (!datePattern.test(value)) {
-    throw new Error(`content-manifest.json has an invalid lastUpdated date: ${value}`);
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-    year: "numeric",
-  }).format(new Date(`${value}T00:00:00.000Z`));
+export function contentUpdatedDate(date = new Date()): string {
+  return isoUpdatedDate(date);
 }
 
 /**
  * @param manifestPath - Source manifest containing the artifact publication date.
- * @returns The validated date used by rendered artifact pages.
+ * @returns The validated date used only by the portfolio code footer.
  */
-export function readArtifactUpdatedDate(manifestPath = contentManifestPath): string {
+export function readContentUpdatedDate(manifestPath = contentManifestPath): string {
   const manifest = readContentManifest(manifestPath);
 
   if (typeof manifest.lastUpdated !== "string") {
     throw new Error(`content-manifest.json is missing lastUpdated: ${manifestPath}`);
   }
 
-  formatArtifactUpdatedDate(manifest.lastUpdated);
+  validateUpdatedDate(manifest.lastUpdated, "content-manifest.json lastUpdated");
   return manifest.lastUpdated;
 }
 
 /**
- * Updates the source manifest immediately before artifact rendering.
+ * Updates the code/footer date without coupling it to artifact rendering.
  *
  * @param manifestPath - Editable source manifest to update.
  * @param date - Publication time to write.
  * @returns The ISO calendar date written to the manifest.
  */
-export function writeArtifactUpdatedDate(
+export function writeContentUpdatedDate(
   manifestPath = contentManifestPath,
   date = new Date(),
 ): string {
   const manifest = readContentManifest(manifestPath);
-  const lastUpdated = artifactUpdatedDate(date);
+  const lastUpdated = contentUpdatedDate(date);
 
   writeFileSync(manifestPath, `${JSON.stringify({ ...manifest, lastUpdated }, null, 2)}\n`);
   return lastUpdated;
@@ -86,8 +69,8 @@ function readContentManifest(manifestPath: string): ContentManifest {
 /* istanbul ignore next */
 if (isEntrypoint(import.meta.url)) {
   try {
-    const lastUpdated = writeArtifactUpdatedDate();
-    logSuccess(`Updated artifact source date: ${lastUpdated}`);
+    const lastUpdated = writeContentUpdatedDate();
+    logSuccess(`Updated code/footer content date: ${lastUpdated}`);
   } catch (error) {
     logError(error instanceof Error ? error.message : String(error));
     process.exit(1);

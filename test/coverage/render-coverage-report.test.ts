@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import {
+  coverageUpdatedAt,
   parseLcov,
   renderCoverageHtml,
   renderCoverageReport,
@@ -38,7 +39,7 @@ describe("render coverage report", () => {
 
   test("parses lcov metrics and renders coverage html", () => {
     const files = parseLcov(sampleLcov);
-    const html = renderCoverageHtml(files, "2026-08-18");
+    const html = renderCoverageHtml(files, "2026-08-18T14:42:31.123-04:00");
 
     expect(files).toEqual([
       {
@@ -49,7 +50,9 @@ describe("render coverage report", () => {
       },
     ]);
     expect(html).toContain("Artifact Generator Coverage");
-    expect(html).toContain('<time datetime="2026-08-18">August 18, 2026</time>');
+    expect(html).toContain(
+      '<time datetime="2026-08-18T18:42:31.123Z">Aug 18, 2026 at 6:42 PM UTC</time>',
+    );
     expect(html).toContain('data-scheme="atlas"');
     expect(html).toContain("connorhunter.theme.scheme");
     expect(html).toContain('message.type.endsWith(messageSuffix)');
@@ -61,22 +64,40 @@ describe("render coverage report", () => {
     expect(html).toContain("scripts/example.ts");
   });
 
+  test("normalizes the project-owned publication timestamp", () => {
+    expect(coverageUpdatedAt("2026-08-18T14:42:31.123-04:00")).toBe(
+      "2026-08-18T18:42:31.123Z",
+    );
+    expect(() => coverageUpdatedAt("not-a-date")).toThrow(
+      "Invalid coverage publication date",
+    );
+    expect(() => coverageUpdatedAt("August 18, 2026")).toThrow(
+      "Invalid coverage publication date",
+    );
+    expect(() => coverageUpdatedAt("2026-08-18")).toThrow(
+      "Invalid coverage publication date",
+    );
+    expect(() => coverageUpdatedAt("2026-02-30T12:00:00Z")).toThrow(
+      "Invalid coverage publication date",
+    );
+  });
+
   test("writes the html report beside bun coverage output", async () => {
     spyOn(console, "log").mockImplementation(() => undefined);
     tempDir = mkdtempSync(join(tmpdir(), "coverage-report-"));
     const lcovPath = join(tempDir, "lcov.info");
     const outputPath = join(tempDir, "index.html");
-    const manifestPath = join(tempDir, "content-manifest.json");
     writeFileSync(lcovPath, passingLcov);
-    writeFileSync(manifestPath, JSON.stringify({ lastUpdated: "2026-08-18" }));
 
     await expect(
-      renderCoverageReport(lcovPath, outputPath, undefined, { manifestPath }),
+      renderCoverageReport(lcovPath, outputPath, undefined, {
+        updatedAt: "2026-08-18T14:42:31.123-04:00",
+      }),
     ).resolves.toBe(outputPath);
 
     expect(readFileSync(outputPath, "utf8")).toContain("Artifact Generator Coverage");
     expect(readFileSync(outputPath, "utf8")).toContain(
-      '<time datetime="2026-08-18">August 18, 2026</time>',
+      '<time datetime="2026-08-18T18:42:31.123Z">Aug 18, 2026 at 6:42 PM UTC</time>',
     );
   });
 
@@ -85,32 +106,24 @@ describe("render coverage report", () => {
     tempDir = mkdtempSync(join(tmpdir(), "coverage-report-"));
     const lcovPath = join(tempDir, "lcov.info");
     const outputPath = join(tempDir, "index.html");
-    const manifestPath = join(tempDir, "content-manifest.json");
     writeFileSync(lcovPath, sampleLcov);
-    writeFileSync(manifestPath, JSON.stringify({ lastUpdated: "2026-08-18" }));
 
     await expect(
-      renderCoverageReport(lcovPath, outputPath, undefined, { manifestPath }),
+      renderCoverageReport(lcovPath, outputPath, undefined, {
+        updatedAt: "2026-08-18T14:42:31.123-04:00",
+      }),
     ).rejects.toThrow("Coverage threshold failed");
     expect(readFileSync(outputPath, "utf8")).toContain("Artifact Generator Coverage");
   });
 
-  test("requires a valid shared publication date", async () => {
+  test("requires a valid project-owned publication date", async () => {
     tempDir = mkdtempSync(join(tmpdir(), "coverage-report-"));
     const lcovPath = join(tempDir, "lcov.info");
     const outputPath = join(tempDir, "index.html");
-    const manifestPath = join(tempDir, "content-manifest.json");
     writeFileSync(lcovPath, passingLcov);
-    writeFileSync(manifestPath, JSON.stringify({}));
 
     await expect(
-      renderCoverageReport(lcovPath, outputPath, undefined, { manifestPath }),
-    ).rejects.toThrow("missing lastUpdated");
-
-    writeFileSync(manifestPath, JSON.stringify({ lastUpdated: "August 18" }));
-
-    await expect(
-      renderCoverageReport(lcovPath, outputPath, undefined, { manifestPath }),
-    ).rejects.toThrow("invalid lastUpdated");
+      renderCoverageReport(lcovPath, outputPath, undefined, { updatedAt: "not-a-date" }),
+    ).rejects.toThrow("Invalid coverage publication date");
   });
 });
