@@ -50,12 +50,11 @@ function fakeHeadingLink(hash: string): FakeHeadingLink {
 }
 
 describe("docs preview assets", () => {
-  test("shows the latest document update date beneath the document count", () => {
+  test("keeps update metadata out of navigation chrome", () => {
     const html = renderPageHtml({
       articlesHtml: "<article>Docs</article>",
       clientScript: "",
       documentCount: 3,
-      lastUpdated: "2026-08-18",
       navigationHtml: "",
       pageTitle: "Project docs",
       projectIcon: null,
@@ -64,9 +63,8 @@ describe("docs preview assets", () => {
     });
 
     expect(html).toContain('class="nav-count" data-nav-count aria-live="polite">3 documents');
-    expect(html).toContain(
-      'class="nav-updated">Updated <time datetime="2026-08-18">August 18, 2026</time>',
-    );
+    expect(html).not.toContain("nav-updated");
+    expect(html).not.toContain("Updated August 18, 2026");
   });
 
   test("renders diagram viewer pages with project favicon links", () => {

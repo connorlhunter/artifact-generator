@@ -89,15 +89,16 @@ describe("render docs preview", () => {
     expect(html).toContain("data-doc-search-input");
     expect(html).toContain("Search documentation");
     expect(html).toContain("data-nav-count");
-    expect(html).toContain("Updated");
-    expect(html).toContain('Updated <time datetime="2026-08-19">August 19, 2026</time>');
+    expect(html).not.toContain("nav-updated");
     const indexArticle =
       /<article\s+id="doc-docs-fixture-index-md"[\s\S]*?<\/article>/u.exec(html)?.[0] ?? "";
     const guideArticle =
       /<article\s+id="doc-docs-fixture-nested-guide-md"[\s\S]*?<\/article>/u.exec(html)?.[0] ?? "";
     expect(indexArticle).toContain('class="doc-version">v1.0.0</span>');
+    expect(indexArticle).toContain('Updated <time datetime="2026-08-18">August 18, 2026</time>');
     expect(indexArticle).toContain('<time datetime="2026-08-18">August 18, 2026</time>');
     expect(guideArticle).toContain('class="doc-version">v1.2.0</span>');
+    expect(guideArticle).toContain('Updated <time datetime="2026-08-19">August 19, 2026</time>');
     expect(guideArticle).toContain('<time datetime="2026-08-19">August 19, 2026</time>');
     expect(html).toContain('class="nav-panel"');
     expect(html).toContain('class="page-outline"');

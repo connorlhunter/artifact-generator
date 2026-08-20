@@ -1,5 +1,4 @@
 import type { ProjectIconPreviewAsset } from "../docs-utils.ts";
-import { formatUpdatedDate } from "../../core/versioned-artifact-metadata.ts";
 import { escapeHtml } from "./html-escape.ts";
 
 /**
@@ -18,10 +17,6 @@ export interface DocsPreviewPageHtml {
    * Number of Markdown documents in the preview.
    */
   documentCount: number;
-  /**
-   * Latest source-owned document update date shown below the document count.
-   */
-  lastUpdated: string;
   /**
    * Rendered sidebar navigation.
    */
@@ -83,7 +78,6 @@ ${themeBootstrapScript()}
                 </button>
               </div>
               <p class="nav-count" data-nav-count aria-live="polite">${page.documentCount} documents</p>
-              <p class="nav-updated">Updated <time datetime="${escapeHtml(page.lastUpdated)}">${escapeHtml(formatUpdatedDate(page.lastUpdated))}</time></p>
             </div>
             <label class="nav-search">
               <span>Search</span>
