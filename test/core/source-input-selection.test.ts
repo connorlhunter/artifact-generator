@@ -55,6 +55,13 @@ describe("source input selection", () => {
     expect(() => selectSourceInputs(["local=missing"], "/workspace")).toThrow(
       "Local source bundle directory does not exist",
     );
+
+    const workspace = mkdtempSync(join(tmpdir(), "artifact-source-workspace-"));
+    tempDirectories.push(workspace);
+    mkdirSync(join(workspace, localSourceInputBundlesRoot), { recursive: true });
+    expect(() => selectSourceInputs(["local=missing"], workspace)).toThrow(
+      "Local source bundle does not exist: missing",
+    );
   });
 
   test("validates a selected source tree and rejects symlinks", () => {

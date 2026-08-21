@@ -91,14 +91,23 @@ export function runChangeNameValidation(command: string | undefined, value = "")
   throw new Error("Use branch, commit, or pr-title.");
 }
 
+/** Runs the command-line validation and returns its process exit code. */
+export async function runChangeNameValidationCli(
+  command = process.argv[2],
+  readStdin: () => Promise<string> = () => Bun.stdin.text(),
+  reportError: (message: string) => void = (message) => console.error(message),
+): Promise<number> {
+  try {
+    const value = command === "commit" ? await readStdin() : undefined;
+    runChangeNameValidation(command, value);
+    return 0;
+  } catch (error) {
+    reportError(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+}
+
 /* istanbul ignore next */
 if (isEntrypoint(import.meta.url)) {
-  try {
-    const command = process.argv[2];
-    const value = command === "commit" ? await Bun.stdin.text() : undefined;
-    runChangeNameValidation(command, value);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  }
+  process.exitCode = await runChangeNameValidationCli();
 }

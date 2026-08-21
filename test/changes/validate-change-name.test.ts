@@ -1,9 +1,11 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 import {
   commitSubject,
+  currentBranchName,
   isValidBranchName,
   isValidChangeSubject,
+  runChangeNameValidationCli,
   runChangeNameValidation,
   validateBranchName,
   validateChangeSubject,
@@ -87,6 +89,24 @@ describe("change naming commands", () => {
     expect(() => runChangeNameValidation("pr-title")).not.toThrow();
   });
 
+  test("resolves the checked-out branch when CI does not provide a head reference", () => {
+    delete process.env.GITHUB_HEAD_REF;
+
+    expect(currentBranchName()).toMatch(/\S/u);
+  });
+
+  test("uses the CI ref when Git has no checked-out branch", () => {
+    delete process.env.GITHUB_HEAD_REF;
+    process.env.GITHUB_REF_NAME = "feat/coverage-threshold";
+    spyOn(Bun, "spawnSync").mockReturnValue({
+      exitCode: 0,
+      stderr: Buffer.from(""),
+      stdout: Buffer.from(""),
+    } as ReturnType<typeof Bun.spawnSync>);
+
+    expect(currentBranchName()).toBe("feat/coverage-threshold");
+  });
+
   test("rejects invalid commands and titles", () => {
     process.env.PR_TITLE = "Unprefixed title";
 
@@ -94,7 +114,20 @@ describe("change naming commands", () => {
     expect(() => runChangeNameValidation("unknown")).toThrow("Use branch, commit, or pr-title.");
   });
 
+  test("runs the command-line validator with injected input and error reporting", async () => {
+    expect(
+      await runChangeNameValidationCli("commit", async () => "fix: validate coverage gates"),
+    ).toBe(0);
+
+    const errors: string[] = [];
+    expect(
+      await runChangeNameValidationCli("unknown", async () => "", errors.push.bind(errors)),
+    ).toBe(1);
+    expect(errors).toEqual(["Use branch, commit, or pr-title."]);
+  });
+
   afterEach(() => {
+    mock.restore();
     if (originalHeadRef === undefined) delete process.env.GITHUB_HEAD_REF;
     else process.env.GITHUB_HEAD_REF = originalHeadRef;
     if (originalPrTitle === undefined) delete process.env.PR_TITLE;

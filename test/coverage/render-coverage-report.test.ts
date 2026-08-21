@@ -7,6 +7,7 @@ import {
   parseLcov,
   renderCoverageHtml,
   renderCoverageReport,
+  renderCoverageReportCli,
 } from "../../scripts/coverage/render-coverage-report.ts";
 
 const sampleLcov = `TN:
@@ -50,6 +51,9 @@ describe("render coverage report", () => {
       },
     ]);
     expect(html).toContain("Artifact Generator Coverage");
+    expect(html).toContain(
+      "Required minimum: 95% lines and functions. Generated from the Bun test suite for Artifact Generator.",
+    );
     expect(html).toContain(
       '<time datetime="2026-08-18T18:42:31.123Z">Aug 18, 2026</time>',
     );
@@ -125,5 +129,18 @@ describe("render coverage report", () => {
     await expect(
       renderCoverageReport(lcovPath, outputPath, undefined, { updatedAt: "not-a-date" }),
     ).rejects.toThrow("Invalid coverage publication date");
+  });
+
+  test("returns a command-line failure code when rendering fails", async () => {
+    const errors: unknown[] = [];
+
+    expect(await renderCoverageReportCli(async () => "coverage/index.html")).toBe(0);
+    expect(
+      await renderCoverageReportCli(
+        async () => Promise.reject(new Error("coverage failed")),
+        (error) => errors.push(error),
+      ),
+    ).toBe(1);
+    expect(errors).toEqual([new Error("coverage failed")]);
   });
 });
