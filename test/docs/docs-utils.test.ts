@@ -96,6 +96,7 @@ describe("docs utils", () => {
       {
         id: docId(logicalPath),
         input: logicalPath,
+        metadataPath: `${sourceInputDirs.docs}/${repoFixtureProjectName}/document-metadata.json`,
         project: repoFixtureProjectName,
         sourcePath: normalizeRepoPath(sourcePath),
       },

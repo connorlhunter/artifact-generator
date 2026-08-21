@@ -94,12 +94,11 @@ describe("render docs preview", () => {
       /<article\s+id="doc-docs-fixture-index-md"[\s\S]*?<\/article>/u.exec(html)?.[0] ?? "";
     const guideArticle =
       /<article\s+id="doc-docs-fixture-nested-guide-md"[\s\S]*?<\/article>/u.exec(html)?.[0] ?? "";
-    expect(indexArticle).toContain('class="doc-version">v1.0.0</span>');
     expect(indexArticle).toContain('Updated <time datetime="2026-08-18">August 18, 2026</time>');
     expect(indexArticle).toContain('<time datetime="2026-08-18">August 18, 2026</time>');
-    expect(guideArticle).toContain('class="doc-version">v1.2.0</span>');
-    expect(guideArticle).toContain('Updated <time datetime="2026-08-19">August 19, 2026</time>');
-    expect(guideArticle).toContain('<time datetime="2026-08-19">August 19, 2026</time>');
+    expect(guideArticle).toContain('Updated <time datetime="2026-08-18">August 18, 2026</time>');
+    expect(guideArticle).toContain('<time datetime="2026-08-18">August 18, 2026</time>');
+    expect(html).not.toContain('class="doc-version"');
     expect(html).toContain('class="nav-panel"');
     expect(html).toContain('class="page-outline"');
     expect(html).toContain("data-outline-links");
@@ -177,6 +176,8 @@ describe("render docs preview", () => {
     expect(html).toContain('href="icons/docs-fixture/mark.svg"');
     expect(html).not.toContain('src="icons/general-docs/mark.svg"');
     expect(html).toContain("navigator.clipboard.writeText");
+    expect(html).toContain('document.execCommand("copy")');
+    expect(html).not.toContain("Select source");
     expect(html).toContain("new AbortController()");
     expect(html).toContain('Symbol.for("docs.preview.cleanup")');
     expect(html).not.toContain("__docsPreviewCleanup");
@@ -200,9 +201,7 @@ describe("render docs preview", () => {
     expect(html).toContain('content: "Close source";');
     expect(html).toContain("<h2>Index</h2>");
     expect(html).toContain('<p class="doc-eyebrow">Docs Fixture</p>');
-    expect(html).toContain(
-      "<pre><code>&lt;!-- artifact-generator:version=1.0.0 lastUpdated=2026-08-18 --&gt;",
-    );
+    expect(html).not.toContain("artifact-generator:version=1.0.0");
     expect(html).not.toContain('href="source/');
     expect(html).not.toContain(pathToFileURL(resolve(markdownPaths.fixtureDocsIndex)).href);
     expect(html).toContain("#doc-docs-fixture-nested-guide-md");

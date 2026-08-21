@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.7.2 - 2026-08-21
+
+### Changed
+
+- Centralized each documentation collection's version and update date in one `document-metadata.json` file.
+- Keep the shared update date on every rendered page while removing repeated version labels.
+
+### Fixed
+
+- Keep source-copy controls labeled Copy, with an iframe-safe clipboard fallback.
+
 ## 1.7.1 - 2026-08-20
 
 ### Changed

@@ -7,6 +7,7 @@ import {
   type MermaidPreviewAsset,
   type ProjectIconPreviewAsset,
 } from "../docs-utils.ts";
+import { readDocumentMetadata } from "../doc-metadata.ts";
 import { renderDocArticle, type RenderedDocArticle } from "./article-html.ts";
 import { loadDocsPreviewClientScript } from "./client.ts";
 import { renderNavigation } from "./navigation-html.ts";
@@ -45,13 +46,14 @@ export async function renderDocsPreviewPage(
 ): Promise<RenderedDocsPreviewPage> {
   const orderedDocs = orderedDocsForPreview(docs);
   const knownIds = idsByPath(orderedDocs);
+  const metadataByPath = await documentMetadataByPath(orderedDocs);
   const title = docsPreviewTitle(orderedDocs);
   const [styles, clientScript, renderedDocs] = await Promise.all([
     loadDocsPreviewStyles(),
     loadDocsPreviewClientScript(),
     Promise.all(
       orderedDocs.map((doc): Promise<RenderedDocArticle> =>
-        renderDocArticle(doc, knownIds, options),
+        renderDocArticle(doc, knownIds, options, metadataByPath.get(doc.metadataPath ?? "")),
       ),
     ),
   ]);
@@ -70,6 +72,18 @@ export async function renderDocsPreviewPage(
     }),
     projectIconAssets: projectIconAssetsForDocs(orderedDocs),
   };
+}
+
+/** Loads each centralized document metadata file once for the selected preview. */
+async function documentMetadataByPath(
+  docs: MarkdownDoc[],
+): Promise<Map<string, Awaited<ReturnType<typeof readDocumentMetadata>>>> {
+  const paths = [...new Set(docs.flatMap((doc) => (doc.metadataPath ? [doc.metadataPath] : [])))];
+  const entries = await Promise.all(
+    paths.map(async (path) => [path, await readDocumentMetadata(path)] as const),
+  );
+
+  return new Map(entries);
 }
 
 /**

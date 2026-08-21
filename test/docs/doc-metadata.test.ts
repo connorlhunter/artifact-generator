@@ -1,5 +1,19 @@
-import { describe, expect, test } from "bun:test";
-import { parseDocSource } from "../../scripts/docs/doc-metadata.ts";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, test } from "bun:test";
+import {
+  parseCentralizedDocSource,
+  parseDocSource,
+  readDocumentMetadata,
+} from "../../scripts/docs/doc-metadata.ts";
+
+let directory = "";
+
+afterEach(() => {
+  if (directory) rmSync(directory, { force: true, recursive: true });
+  directory = "";
+});
 
 describe("document metadata", () => {
   test("parses and removes the required first-line metadata comment", () => {
@@ -79,5 +93,23 @@ describe("document metadata", () => {
         "guide.md",
       ),
     ).toThrow("must begin with");
+  });
+
+  test("reads centralized document metadata and rejects legacy page declarations", async () => {
+    directory = mkdtempSync(join(tmpdir(), "document-metadata-"));
+    const metadataPath = join(directory, "document-metadata.json");
+    writeFileSync(metadataPath, '{\n  "lastUpdated": "2026-08-18",\n  "version": "2.4.1"\n}');
+
+    await expect(readDocumentMetadata(metadataPath)).resolves.toEqual({
+      lastUpdated: "2026-08-18",
+      version: "2.4.1",
+    });
+    expect(parseCentralizedDocSource("# Guide\n", "docs/example/guide.md")).toBe("# Guide\n");
+    expect(() =>
+      parseCentralizedDocSource(
+        "<!-- artifact-generator:version=2.4.1 lastUpdated=2026-08-18 -->\n# Guide\n",
+        "docs/example/guide.md",
+      ),
+    ).toThrow("metadata belongs");
   });
 });

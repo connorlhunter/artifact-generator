@@ -3,6 +3,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 import { diagramOutputPath, readDiagramMetadata } from "../diagrams/diagram-metadata.ts";
 import { formatDocLabel, formatDocSectionTitle } from "./docs-labels.ts";
+import { documentMetadataFile } from "./doc-metadata.ts";
 
 /**
  * Markdown document discovered for the docs preview.
@@ -20,6 +21,8 @@ export interface MarkdownDoc {
    * Logical project group used in preview navigation.
    */
   project: string;
+  /** Central metadata file used by this documentation collection. */
+  metadataPath?: string;
   /**
    * Local cache path read after source inputs are synced from S3.
    */
@@ -464,15 +467,32 @@ function docsProjectName(p: string): string | null {
 function markdownDoc(sourcePath: string): MarkdownDoc {
   const normalizedSourcePath = normalizeRepoPath(sourcePath);
   const input = logicalArtifactPath(sourcePath);
+  const project = getProject(input);
   const doc: MarkdownDoc = {
     id: docId(input),
     input,
-    project: getProject(input),
+    metadataPath: documentMetadataPath(normalizedSourcePath, input, project),
+    project,
   };
 
   if (normalizedSourcePath !== input) doc.sourcePath = normalizedSourcePath;
 
   return doc;
+}
+
+/** Returns the metadata file shared by one documentation collection. */
+function documentMetadataPath(sourcePath: string, input: string, project: string): string {
+  if (input.startsWith(`${logicalDocsRoot}/${project}/`)) {
+    return join(sourceInputDirs.docs, project, documentMetadataFile);
+  }
+
+  const segments = sourcePath.split("/");
+  const projectIndex = segments.lastIndexOf(project);
+
+  return join(
+    projectIndex >= 0 ? segments.slice(0, projectIndex + 1).join("/") : dirname(sourcePath),
+    documentMetadataFile,
+  );
 }
 
 /**
