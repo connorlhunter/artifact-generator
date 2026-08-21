@@ -2,7 +2,7 @@
 
 Builds and publishes the docs, diagrams, metadata, icons, generated resume, and Artifact Generator coverage used by the portfolio.
 
-Application repositories publish their own coverage. This repo publishes its own coverage and the shared artifact bundles.
+Application repositories publish their own coverage. This repo publishes its own coverage and the shared artifact bundles. Artifact Generator requires at least 95% line and function coverage.
 
 ## Start Here
 

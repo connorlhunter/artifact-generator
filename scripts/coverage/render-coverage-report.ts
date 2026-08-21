@@ -39,8 +39,8 @@ export interface RenderCoverageReportOptions {
 }
 
 const defaultCoverageThresholds: CoverageThresholds = {
-  functions: 96,
-  lines: 93,
+  functions: 95,
+  lines: 95,
 };
 
 const emptyMetric = (): CoverageMetric => ({ covered: 0, found: 0 });
@@ -602,7 +602,7 @@ export function renderCoverageHtml(files: CoverageFile[], updatedAt: string): st
     <header>
       <div>
         <h1>Artifact Generator Coverage</h1>
-        <p>Bun test coverage generated from the Artifact Generator test suite.</p>
+        <p>Required minimum: 95% lines and functions. Generated from the Bun test suite for Artifact Generator.</p>
         <p>Updated <time datetime="${escapeHtml(publicationTimestamp)}">${escapeHtml(coverageUpdatedAtLabel(publicationTimestamp))}</time></p>
       </div>
     </header>
@@ -650,12 +650,21 @@ export async function renderCoverageReport(
   return outputPath;
 }
 
+/** Runs coverage-report rendering and returns its process exit code. */
+export async function renderCoverageReportCli(
+  render: () => Promise<string> = () => renderCoverageReport(),
+  reportError: (error: unknown) => void = logCaughtError,
+): Promise<number> {
+  try {
+    await render();
+    return 0;
+  } catch (error) {
+    reportError(error);
+    return 1;
+  }
+}
+
 /* istanbul ignore next */
 if (isEntrypoint(import.meta.url)) {
-  try {
-    await renderCoverageReport();
-  } catch (error) {
-    logCaughtError(error);
-    process.exit(1);
-  }
+  process.exitCode = await renderCoverageReportCli();
 }
