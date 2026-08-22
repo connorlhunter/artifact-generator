@@ -165,7 +165,7 @@ export async function renderDocArticle(
           <p class="doc-eyebrow">${escapeHtml(docEyebrow(doc))}</p>
           <h2>${escapeHtml(docLinkLabel(doc))}</h2>
           <p class="doc-path">${escapeHtml(doc.input)}</p>
-          <p class="doc-metadata"><span>Updated <time datetime="${escapeHtml(metadata.lastUpdated)}">${escapeHtml(formatUpdatedDate(metadata.lastUpdated))}</time></span></p>
+          <p class="doc-metadata"><span class="doc-version">v${escapeHtml(metadata.version)}</span><span>Updated <time datetime="${escapeHtml(metadata.lastUpdated)}">${escapeHtml(formatUpdatedDate(metadata.lastUpdated))}</time></span></p>
         </div>
         ${githubLinkHtml(githubUrl)}
       </header>
