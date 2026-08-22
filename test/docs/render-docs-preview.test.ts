@@ -96,9 +96,10 @@ describe("render docs preview", () => {
       /<article\s+id="doc-docs-fixture-nested-guide-md"[\s\S]*?<\/article>/u.exec(html)?.[0] ?? "";
     expect(indexArticle).toContain('Updated <time datetime="2026-08-18">August 18, 2026</time>');
     expect(indexArticle).toContain('<time datetime="2026-08-18">August 18, 2026</time>');
+    expect(indexArticle).toContain('<span class="doc-version">v1.0.0</span>');
     expect(guideArticle).toContain('Updated <time datetime="2026-08-18">August 18, 2026</time>');
     expect(guideArticle).toContain('<time datetime="2026-08-18">August 18, 2026</time>');
-    expect(html).not.toContain('class="doc-version"');
+    expect(guideArticle).toContain('<span class="doc-version">v1.0.0</span>');
     expect(html).toContain('class="nav-panel"');
     expect(html).toContain('class="page-outline"');
     expect(html).toContain("data-outline-links");
