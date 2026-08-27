@@ -77,6 +77,10 @@ export function publishDestinations(): PublishDestination[] {
         "projects/*/coverage/*",
         "--include",
         "projects/artifact-generator/coverage/*",
+        "--exclude",
+        "projects/*/changelog/*",
+        "--include",
+        "projects/artifact-generator/changelog/*",
       ],
     },
     {
