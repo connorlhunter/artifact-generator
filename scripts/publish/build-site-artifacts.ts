@@ -33,6 +33,39 @@ interface ProjectManifest {
   readonly projects: Record<string, unknown>;
 }
 
+/** Dependencies used to build the published artifact bundle. */
+export interface BuildSiteArtifactActions {
+  readonly buildChangelogArtifact: typeof buildChangelogArtifact;
+  readonly buildDocsArtifact: typeof buildDocsArtifact;
+  readonly buildResume: typeof buildResume;
+  readonly buildSiteContentArtifact: typeof buildSiteContentArtifact;
+  readonly cleanPublishOutputs: typeof cleanPublishOutputs;
+  readonly copyDocsArtifact: typeof copyDocsArtifact;
+  readonly copyRenderedDiagrams: typeof copyRenderedDiagrams;
+  readonly copySharedPublishInputs: typeof copySharedPublishInputs;
+  readonly projectSlugsFromManifest: typeof projectSlugsFromManifest;
+  readonly renderCoveragePdf: typeof renderCoveragePdf;
+  readonly renderCoverageReport: typeof renderCoverageReport;
+  readonly renderDiagrams: typeof renderDiagrams;
+  readonly validateSourceInputSelection: typeof validateSourceInputSelection;
+}
+
+const defaultActions: BuildSiteArtifactActions = {
+  buildChangelogArtifact,
+  buildDocsArtifact,
+  buildResume,
+  buildSiteContentArtifact,
+  cleanPublishOutputs,
+  copyDocsArtifact,
+  copyRenderedDiagrams,
+  copySharedPublishInputs,
+  projectSlugsFromManifest,
+  renderCoveragePdf,
+  renderCoverageReport,
+  renderDiagrams,
+  validateSourceInputSelection,
+};
+
 /**
  * Reads project slugs from the shared artifact manifest.
  *
@@ -50,34 +83,37 @@ export function projectSlugsFromManifest(manifestPath = projectManifestPath): st
  *
  * @param docsArgs - Source selection arguments preserved for the CLI contract.
  */
-export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void> {
-  validateSourceInputSelection();
+export async function buildSiteArtifacts(
+  docsArgs: string[] = [],
+  actions: BuildSiteArtifactActions = defaultActions,
+): Promise<void> {
+  actions.validateSourceInputSelection();
   sourceInputCommandArgs(docsArgs);
-  const projectSlugs = projectSlugsFromManifest();
+  const projectSlugs = actions.projectSlugsFromManifest();
 
   if (projectSlugs.length === 0) {
     throw new Error(`No projects found in ${projectManifestPath}`);
   }
 
-  cleanPublishOutputs();
+  actions.cleanPublishOutputs();
   logHeading("Building project artifact bundle", { count: projectSlugs.length });
 
-  await renderCoverageReport();
-  await renderCoveragePdf();
-  await buildChangelogArtifact();
-  buildSiteContentArtifact();
-  await buildResume();
-  await renderDiagrams(projectSlugs);
+  await actions.renderCoverageReport();
+  await actions.renderCoveragePdf();
+  await actions.buildChangelogArtifact();
+  actions.buildSiteContentArtifact();
+  await actions.buildResume();
+  await actions.renderDiagrams(projectSlugs);
 
   for (const slug of projectSlugs) {
     logItem(`Compiling docs for ${slug}`, 1);
-    await buildDocsArtifact(slug);
-    copyDocsArtifact(slug);
+    await actions.buildDocsArtifact(slug);
+    actions.copyDocsArtifact(slug);
   }
 
-  const diagramCount = copyRenderedDiagrams();
+  const diagramCount = actions.copyRenderedDiagrams();
   logItem(`Rendered diagrams copied: ${diagramCount}`, 1);
-  copySharedPublishInputs();
+  actions.copySharedPublishInputs();
 
   logSuccess(`Built site artifacts: ${publishOutputs.siteArtifacts}`);
   logSuccess(`Built site assets: ${publishOutputs.siteAssets}`);

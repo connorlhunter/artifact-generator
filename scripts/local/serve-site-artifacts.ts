@@ -17,6 +17,12 @@ const projectDirectories = {
 type LocalProjectSlug = keyof typeof projectDirectories;
 type ProjectArtifactKind = "changelog" | "coverage";
 
+/** Optional local roots used when serving a prepared artifact bundle. */
+export interface ServeLocalArtifactsOptions {
+  readonly bundleRoot?: string;
+  readonly root?: string;
+}
+
 /** Returns the owning repository output for a locally generated project report. */
 export function localProjectArtifactPath(
   slug: LocalProjectSlug,
@@ -67,7 +73,8 @@ export function localArtifactPath(
   return existsSync(bundlePath) ? bundlePath : undefined;
 }
 
-function requestPath(request: Request): string | undefined {
+/** Returns a safe relative artifact path from a public request. */
+export function artifactRequestPath(request: Request): string | undefined {
   let pathname: string;
 
   try {
@@ -88,30 +95,45 @@ function requestPath(request: Request): string | undefined {
   return relativePath;
 }
 
-function responseHeaders(): HeadersInit {
+/** Returns the common non-cacheable, cross-origin response headers. */
+export function artifactResponseHeaders(): HeadersInit {
   return {
     "access-control-allow-origin": "*",
     "cache-control": "no-store",
   };
 }
 
+/** Resolves and serves one local public-artifact request. */
+export function localArtifactResponse(
+  request: Request,
+  root = workspaceRoot,
+  bundleRoot = siteArtifactsRoot,
+): Response {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: artifactResponseHeaders() });
+  }
+
+  const relativePath = artifactRequestPath(request);
+  const path = relativePath && localArtifactPath(relativePath, root, bundleRoot);
+
+  if (!path) return new Response("Not found", { status: 404, headers: artifactResponseHeaders() });
+
+  return new Response(Bun.file(path), { headers: artifactResponseHeaders() });
+}
+
 /** Starts a local public-artifact server with project-owned report overlays. */
-export function serveLocalArtifacts(port = defaultPort): void {
-  Bun.serve({
+export function serveLocalArtifacts(
+  port = defaultPort,
+  options: ServeLocalArtifactsOptions = {},
+): ReturnType<typeof Bun.serve> {
+  const server = Bun.serve({
     hostname: "127.0.0.1",
     port,
-    fetch(request) {
-      if (request.method === "OPTIONS") return new Response(null, { headers: responseHeaders() });
-
-      const relativePath = requestPath(request);
-      const path = relativePath && localArtifactPath(relativePath);
-      if (!path) return new Response("Not found", { status: 404, headers: responseHeaders() });
-
-      return new Response(Bun.file(path), { headers: responseHeaders() });
-    },
+    fetch: (request) => localArtifactResponse(request, options.root, options.bundleRoot),
   });
 
   console.log(`Serving local artifacts at http://127.0.0.1:${port}`);
+  return server;
 }
 
 if (isEntrypoint(import.meta.url)) {
