@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { afterAll, afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createIsolatedSourceInputs } from "../resources/isolated-source-inputs.ts";
 
@@ -43,12 +43,16 @@ describe("sync source inputs", () => {
   test("resets and syncs every configured source folder", async () => {
     const commands: Array<{ readonly args: ReadonlyArray<string>; readonly subject: unknown }> = [];
     spyOn(console, "log").mockImplementation(() => undefined);
+    const staleFile = `${sourceInputRoot}/artifacts/docs/stale.txt`;
+    mkdirSync(`${sourceInputRoot}/artifacts/docs`, { recursive: true });
+    writeFileSync(staleFile, "stale");
 
     await syncSourceInputs({
       commandRunner: async (_command, args, context) => {
         const target = args[3];
         if (!target) throw new Error("Missing sync target.");
 
+        if (target.endsWith("/artifacts/docs")) expect(existsSync(staleFile)).toBe(false);
         mkdirSync(target, { recursive: true });
         writeFileSync(`${target}/fixture.txt`, "fixture");
         commands.push({ args, subject: context?.subject });
@@ -85,5 +89,17 @@ describe("sync source inputs", () => {
 
   test("requires both source buckets", () => {
     expect(() => sourceSyncPlans({})).toThrow("Missing SOURCE_ARTIFACTS_BUCKET");
+  });
+
+  test("rejects an empty required source folder after a sync", async () => {
+    await expect(
+      syncSourceInputs({
+        commandRunner: async () => ({ stderr: "", stdout: "" }),
+        env: {
+          SOURCE_ARTIFACTS_BUCKET: "artifact-source",
+          SOURCE_ASSETS_BUCKET: "asset-source",
+        },
+      }),
+    ).rejects.toThrow("No source files synced for Docs source");
   });
 });
