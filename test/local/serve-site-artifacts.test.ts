@@ -3,8 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  artifactRequestPath,
+  artifactResponseHeaders,
   localArtifactPath,
+  localArtifactResponse,
   localProjectArtifactPath,
+  serveLocalArtifacts,
 } from "../../scripts/local/serve-site-artifacts.ts";
 
 let temporaryDirectory = "";
@@ -45,6 +49,76 @@ describe("local artifact server", () => {
       coverage,
     );
     expect(localArtifactPath("docs/cipher/index.json", workspace, bundle)).toBe(docs);
+    expect(localArtifactPath("", workspace, bundle)).toBeUndefined();
     expect(localArtifactPath("../private.json", workspace, bundle)).toBeUndefined();
+  });
+
+  test("rejects unsafe request paths before resolving a local artifact", () => {
+    expect(
+      artifactRequestPath(new Request("http://localhost/projects/cipher/coverage/index.json")),
+    ).toBe("projects/cipher/coverage/index.json");
+    expect(
+      artifactRequestPath(new Request("http://localhost/%2e%2e%2fprivate.json")),
+    ).toBeUndefined();
+    expect(
+      artifactRequestPath(new Request("http://localhost/projects/%5cprivate.json")),
+    ).toBeUndefined();
+    expect(artifactRequestPath(new Request("http://localhost/"))).toBeUndefined();
+    expect(artifactRequestPath({ url: "http://%" } as Request)).toBeUndefined();
+  });
+
+  test("serves safe local artifacts with consistent response headers", async () => {
+    temporaryDirectory = mkdtempSync(join(tmpdir(), "artifact-local-response-"));
+    const workspace = join(temporaryDirectory, "workspace");
+    const bundle = join(temporaryDirectory, "bundle");
+    const artifact = join(workspace, "cipher", "coverage", "index.json");
+    mkdirSync(join(workspace, "cipher", "coverage"), { recursive: true });
+    writeFileSync(artifact, '{"schemaVersion":2}\n');
+
+    const options = await localArtifactResponse(
+      new Request("http://localhost/projects/cipher/coverage/index.json", { method: "OPTIONS" }),
+      workspace,
+      bundle,
+    );
+    const found = await localArtifactResponse(
+      new Request("http://localhost/projects/cipher/coverage/index.json"),
+      workspace,
+      bundle,
+    );
+    const missing = await localArtifactResponse(
+      new Request("http://localhost/projects/cipher/coverage/missing.json"),
+      workspace,
+      bundle,
+    );
+
+    expect(options.status).toBe(200);
+    expect(found.status).toBe(200);
+    expect(await found.text()).toContain('"schemaVersion":2');
+    expect(missing.status).toBe(404);
+    expect(artifactResponseHeaders()).toMatchObject({
+      "access-control-allow-origin": "*",
+      "cache-control": "no-store",
+    });
+  });
+
+  test("starts a closable local server for an explicit artifact workspace", async () => {
+    temporaryDirectory = mkdtempSync(join(tmpdir(), "artifact-local-server-"));
+    const workspace = join(temporaryDirectory, "workspace");
+    const bundle = join(temporaryDirectory, "bundle");
+    const artifact = join(workspace, "cipher", "coverage", "index.json");
+    mkdirSync(join(workspace, "cipher", "coverage"), { recursive: true });
+    writeFileSync(artifact, '{"schemaVersion":2}\n');
+    const server = serveLocalArtifacts(0, { bundleRoot: bundle, root: workspace });
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/projects/cipher/coverage/index.json`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain('"schemaVersion":2');
+    } finally {
+      server.stop(true);
+    }
   });
 });
