@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.4 - 2026-08-27
+
+### Changed
+
+- Publish documentation, diagrams, coverage, and changelog resources in native formats instead of HTML viewers.
+- Keep project artifact generation in the owning repositories and the Portfolio focused on reading and navigation.
+
 ## 1.7.3 - 2026-08-26
 
 ### Changed
