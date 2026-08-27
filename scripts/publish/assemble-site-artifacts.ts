@@ -7,7 +7,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 import { ensureDirectory } from "../core/bun-native-fs.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
@@ -17,12 +17,12 @@ import {
   isVersionedDiagramOutput,
   readDiagramMetadata,
 } from "../diagrams/diagram-metadata.ts";
+import { formatDocLabel } from "../docs/docs-labels.ts";
 import {
   sourceInputCommandArgs,
   validateSourceInputSelection,
 } from "../core/source-input-selection.ts";
 import { logError, logHeading, logItem, logSuccess } from "../core/script-logger.ts";
-import { isHiddenSourcePath } from "./source-input-exclusions.ts";
 
 /**
  * Local bundle directories that map directly to CloudFront origins later.
@@ -32,21 +32,15 @@ export const publishOutputs = {
   siteAssets: join(repoDirs.dist, "site-assets"),
 } as const;
 
-interface CoveragePage {
-  id: string;
-  label: string;
-  path: string;
-  pdfPath?: string;
-}
-
 interface ProjectArtifactManifestEntry {
-  coveragePath?: string;
-  coveragePages?: CoveragePage[];
-  coveragePdfPath?: string;
-  diagramPaths?: string[];
-  docsPath: string;
-  docsPdfPath?: string;
-  overviewDiagramPath?: string;
+  diagrams?: Array<{
+    id?: string;
+    lastUpdated?: string;
+    overview?: boolean;
+    svgPath: string;
+    title?: string;
+    version?: string;
+  }>;
 }
 
 interface ProjectArtifactManifest {
@@ -60,7 +54,7 @@ const defaultDocsProject = "artifact-generator";
  */
 export interface AssembleSiteArtifactsOptions {
   /**
-   * Project folder that receives the current docs preview.
+   * Project folder that receives the current docs artifact.
    */
   readonly docsProject?: string;
 }
@@ -88,16 +82,6 @@ interface CopyPlan {
 }
 
 /**
- * Returns true when a path exists and is a file.
- *
- * @param path - Path to inspect.
- * @returns Whether the path is a file.
- */
-function isFile(path: string): boolean {
-  return existsSync(path) && statSync(path).isFile();
-}
-
-/**
  * Recursively walks files below a directory.
  *
  * @param directory - Directory to inspect.
@@ -117,16 +101,6 @@ function walkFiles(directory: string): string[] {
 
     return [path];
   });
-}
-
-/**
- * Returns true when a project source file lives below a coverage directory.
- *
- * @param path - Path relative to the project source root.
- * @returns Whether the path belongs to project-owned coverage output.
- */
-function isProjectCoveragePath(path: string): boolean {
-  return path.split(/[\\/]+/).includes(repoDirs.coverage);
 }
 
 /**
@@ -181,15 +155,15 @@ export function cleanPublishOutputs(): void {
 }
 
 /**
- * Copies the current docs preview into the project-specific publish path.
+ * Copies one generated docs collection into its project-specific publish path.
  *
- * @param project - Project slug for the docs preview.
+ * @param project - Project slug for the docs artifact.
  */
-export function copyDocsPreview(project = defaultDocsProject): void {
+export function copyDocsArtifact(project = defaultDocsProject): void {
   copyPath({
-    label: "Docs preview",
+    label: "Docs artifact",
     required: true,
-    source: dirname(artifactPaths.docsPreview),
+    source: join(artifactPaths.docsArtifactsDir, project),
     target: join(publishOutputs.siteArtifacts, repoDirs.docs, project),
   });
 }
@@ -199,32 +173,6 @@ export function copyDocsPreview(project = defaultDocsProject): void {
  *
  * @param manifestPath - Published project artifact manifest to update.
  */
-export function addGeneratedPdfPaths(
-  manifestPath = join(publishOutputs.siteArtifacts, "manifests", "project-artifacts.json"),
-): void {
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifest;
-
-  for (const project of Object.values(manifest.projects)) {
-    project.docsPdfPath = project.docsPath.replace(/\.html$/u, ".pdf");
-  }
-
-  const artifactGenerator = manifest.projects[defaultDocsProject];
-
-  if (artifactGenerator?.coveragePath && isFile(artifactPaths.coverageReportPdf)) {
-    artifactGenerator.coveragePdfPath = artifactGenerator.coveragePath.replace(/\.html$/u, ".pdf");
-    artifactGenerator.coveragePages = [
-      {
-        id: "typescript",
-        label: "TypeScript",
-        path: artifactGenerator.coveragePath,
-        pdfPath: artifactGenerator.coveragePdfPath,
-      },
-    ];
-  }
-
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-}
-
 /**
  * Replaces legacy diagram output paths in the published manifest with the
  * versioned SVG names generated from each Mermaid source declaration.
@@ -237,15 +185,20 @@ export function addVersionedDiagramPaths(
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifest;
 
   for (const project of Object.values(manifest.projects)) {
-    if (project.diagramPaths) {
-      project.diagramPaths = project.diagramPaths.map(versionedPublishedDiagramPath);
-    }
-
-    if (project.overviewDiagramPath) {
-      project.overviewDiagramPath = versionedPublishedDiagramPath(project.overviewDiagramPath);
+    if (project.diagrams) {
+      project.diagrams = project.diagrams.map(versionedPublishedDiagram);
     }
   }
 
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+/** Removes source-only frontmatter paths from the public content manifest. */
+function sanitizeContentManifest(
+  manifestPath = join(publishOutputs.siteArtifacts, "manifests", "content-manifest.json"),
+): void {
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
+  delete manifest.profile;
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
@@ -270,41 +223,42 @@ function versionedPublishedDiagramPath(diagramPath: string): string {
   return `${prefix}${outputRelativePath}`;
 }
 
+/** Adds stable display metadata while resolving one Mermaid source to its public SVG. */
+function versionedPublishedDiagram(
+  diagram: NonNullable<ProjectArtifactManifestEntry["diagrams"]>[number],
+): NonNullable<ProjectArtifactManifestEntry["diagrams"]>[number] {
+  const prefix = `${repoDirs.diagrams}/`;
+  const sourceRelativePath = diagramSourcePath(diagram.svgPath.slice(prefix.length));
+  const sourcePath = join(sourceInputDirs.diagrams, sourceRelativePath);
+  const metadata = readDiagramMetadata(sourcePath);
+  const sourceName = basename(sourceRelativePath, ".mmd");
+  const projectFolder = sourceRelativePath.split("/")[0] ?? "";
+  const compactName = sourceName.startsWith(`${projectFolder}-`)
+    ? sourceName.slice(projectFolder.length + 1)
+    : sourceName;
+
+  return {
+    ...diagram,
+    id: diagram.id ?? compactName.replace(/[^a-z0-9]+/giu, "-").replace(/^-+|-+$/gu, ""),
+    lastUpdated: metadata.lastUpdated,
+    svgPath: versionedPublishedDiagramPath(diagram.svgPath),
+    title: diagram.title ?? formatDocLabel(compactName),
+    version: metadata.version,
+  };
+}
+
 /**
- * Copies project markdown/content without republishing project-owned coverage.
+ * Copies generated Portfolio content without republishing project-owned coverage.
  *
  * @returns Number of copied project content files.
  */
-export function copyProjectContent(): number {
-  if (!existsSync(sourceInputDirs.projects)) {
-    throw new Error(`Missing publish input: ${sourceInputDirs.projects}`);
-  }
-
-  const targetRoot = join(publishOutputs.siteArtifacts, "projects");
-  rmSync(targetRoot, { force: true, recursive: true });
-
-  let copied = 0;
-
-  for (const source of walkFiles(sourceInputDirs.projects)) {
-    const relativePath = relative(sourceInputDirs.projects, source);
-
-    if (isProjectCoveragePath(relativePath)) {
-      continue;
-    }
-
-    if (isHiddenSourcePath(relativePath)) {
-      continue;
-    }
-
-    const target = join(targetRoot, relativePath);
-    ensureDirectory(dirname(target));
-    cpSync(source, target, { dereference: true });
-    copied += 1;
-  }
-
-  logItem(`Project content: ${targetRoot}`, 1);
-
-  return copied;
+export function copyGeneratedContent(): void {
+  copyPath({
+    label: "Compiled site content",
+    required: true,
+    source: join(repoDirs.dist, "site-content", "content"),
+    target: join(publishOutputs.siteArtifacts, "content"),
+  });
 }
 
 /**
@@ -319,16 +273,34 @@ export function copySharedPublishInputs(): void {
       target: join(publishOutputs.siteArtifacts, "manifests"),
     },
     {
-      label: "Profile content",
+      label: "Artifact Generator coverage data",
       required: true,
-      source: sourceInputDirs.profile,
-      target: join(publishOutputs.siteArtifacts, "profile"),
+      source: artifactPaths.coverageReport,
+      target: join(
+        publishOutputs.siteArtifacts,
+        "projects",
+        defaultDocsProject,
+        repoDirs.coverage,
+        "index.json",
+      ),
     },
     {
-      label: "Artifact Generator project coverage report",
-      required: isFile(artifactPaths.coverageReport),
-      source: repoDirs.coverage,
-      target: join(publishOutputs.siteArtifacts, "projects", defaultDocsProject, repoDirs.coverage),
+      label: "Artifact Generator coverage PDF",
+      required: true,
+      source: artifactPaths.coverageReportPdf,
+      target: join(
+        publishOutputs.siteArtifacts,
+        "projects",
+        defaultDocsProject,
+        repoDirs.coverage,
+        "coverage.pdf",
+      ),
+    },
+    {
+      label: "Artifact Generator changelog",
+      required: true,
+      source: join(repoDirs.dist, "changelog", defaultDocsProject),
+      target: join(publishOutputs.siteArtifacts, "projects", defaultDocsProject, "changelog"),
     },
     {
       label: "Project icons",
@@ -344,14 +316,14 @@ export function copySharedPublishInputs(): void {
     },
   ];
 
-  copyProjectContent();
+  copyGeneratedContent();
 
   for (const plan of plans) {
     copyPath(plan);
   }
 
-  addGeneratedPdfPaths();
   addVersionedDiagramPaths();
+  sanitizeContentManifest();
 }
 
 /**
@@ -372,7 +344,7 @@ export function assembleSiteArtifacts(options: AssembleSiteArtifactsOptions = {}
   const diagramCount = copyRenderedDiagrams();
   logItem(`Rendered diagrams: ${diagramCount}`, 1);
 
-  copyDocsPreview(options.docsProject);
+  copyDocsArtifact(options.docsProject);
   copySharedPublishInputs();
 
   logSuccess("Assembled site artifact bundle");

@@ -6,7 +6,6 @@ const docsLabelOverrides = new Map([
   ["cognito", "Cognito"],
   ["dynamodb", "DynamoDB"],
   ["e2ee", "E2EE"],
-  ["html", "HTML"],
   ["javascript", "JavaScript"],
   ["jwt", "JWT"],
   ["kms", "KMS"],
@@ -37,7 +36,7 @@ const docsLabelOverrides = new Map([
 ]);
 
 /**
- * Formats a path segment or slug for display in the docs preview.
+ * Formats a path segment or slug for display in docs navigation.
  *
  * @param {string} value - Slug, filename stem, or path segment.
  * @returns {string} Label.

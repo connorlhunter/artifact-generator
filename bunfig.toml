@@ -14,10 +14,6 @@ coveragePathIgnorePatterns = [
   "scripts/diagrams/render-diagrams.ts",
   "scripts/diagrams/render-open-diagrams.ts",
   "scripts/diagrams/validate-diagrams.ts",
-  "scripts/docs/open-docs-preview.ts",
-  "scripts/docs/preview/browser/**",
-  "scripts/docs/render-open-docs-preview.ts",
-  "scripts/coverage/open-coverage-report.ts",
   "scripts/publish/build-site-artifacts.ts",
   "test/resources/**",
 ]

@@ -55,10 +55,9 @@ export const repoFiles = {
 export const artifactPaths = {
   coverageDir: repoDirs.coverage,
   coverageLcov: join(repoDirs.coverage, "lcov.info"),
-  coverageReport: join(repoDirs.coverage, "index.html"),
-  coverageReportPdf: join(repoDirs.coverage, "index.pdf"),
-  docsPreview: join(repoDirs.dist, "docs-preview", "index.html"),
-  docsPreviewPdf: join(repoDirs.dist, "docs-preview", "index.pdf"),
+  coverageReport: join(repoDirs.coverage, "index.json"),
+  coverageReportPdf: join(repoDirs.coverage, "coverage.pdf"),
+  docsArtifactsDir: join(repoDirs.dist, "docs-artifacts"),
   resumeBuildDir: join(repoDirs.dist, ".resume-build"),
   resumePdf: join(repoDirs.dist, repoDirs.resume, "connor-hunter-resume.pdf"),
 } as const;
@@ -74,32 +73,6 @@ export const sharedDiagramInputs = [
  * Git hook configuration managed by the prepare script.
  */
 export const gitHooksPath = ".githooks";
-
-/**
- * Local HTTP server settings for opening generated coverage reports.
- */
-export const coverageServer = {
-  arg: "--serve-coverage-report",
-  host: "127.0.0.1",
-  port: 41737,
-  waitStepMs: 100,
-  waitTimeoutMs: 3000,
-} as const;
-
-/**
- * Local HTTP server settings for opening generated docs previews.
- */
-export const docsPreviewServer = {
-  arg: "--serve-docs-preview",
-  defaultHost: "127.0.0.1",
-  defaultPort: 41738,
-  defaultWaitStepMs: 100,
-  defaultWaitTimeoutMs: 3000,
-  hostEnv: "DOCS_PREVIEW_HOST",
-  portEnv: "DOCS_PREVIEW_PORT",
-  waitStepMsEnv: "DOCS_PREVIEW_WAIT_STEP_MS",
-  waitTimeoutMsEnv: "DOCS_PREVIEW_WAIT_TIMEOUT_MS",
-} as const;
 
 /**
  * Executable names that differ by platform.

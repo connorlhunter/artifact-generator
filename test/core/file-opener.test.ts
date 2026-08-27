@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existingPreviewPath } from "../resources/docs.constants.ts";
+import { existingArtifactPath } from "../resources/docs.constants.ts";
 
 type RunCommand = (
   command: string,
@@ -27,24 +27,24 @@ describe("file opener", () => {
   });
 
   test("opens files with the platform default command", async () => {
-    await expect(openDefaultFile(existingPreviewPath)).resolves.toBe(existingPreviewPath);
+    await expect(openDefaultFile(existingArtifactPath)).resolves.toBe(existingArtifactPath);
 
     expect(runCommand).toHaveBeenCalledWith(
       expect.any(String),
-      expect.arrayContaining([resolve(existingPreviewPath)]),
-      { file: existingPreviewPath },
+      expect.arrayContaining([resolve(existingArtifactPath)]),
+      { file: existingArtifactPath },
     );
   });
 
   test("opens URLs with the platform default command", async () => {
-    await expect(openDefaultUrl("http://127.0.0.1:41737/index.html")).resolves.toBe(
-      "http://127.0.0.1:41737/index.html",
+    await expect(openDefaultUrl("http://127.0.0.1:41737/index.json")).resolves.toBe(
+      "http://127.0.0.1:41737/index.json",
     );
 
     expect(runCommand).toHaveBeenCalledWith(
       expect.any(String),
-      expect.arrayContaining(["http://127.0.0.1:41737/index.html"]),
-      { file: "http://127.0.0.1:41737/index.html" },
+      expect.arrayContaining(["http://127.0.0.1:41737/index.json"]),
+      { file: "http://127.0.0.1:41737/index.json" },
     );
   });
 
@@ -60,8 +60,8 @@ describe("file opener", () => {
         value: "unsupported",
       });
 
-      await expect(openDefaultFile(existingPreviewPath)).rejects.toMatchObject({
-        file: existingPreviewPath,
+      await expect(openDefaultFile(existingArtifactPath)).rejects.toMatchObject({
+        file: existingArtifactPath,
       });
     } finally {
       Object.defineProperty(process, "platform", platform);

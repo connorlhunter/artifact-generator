@@ -1,24 +1,23 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
-import { diagramOutputPath, readDiagramMetadata } from "../diagrams/diagram-metadata.ts";
+import { repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 import { formatDocLabel, formatDocSectionTitle } from "./docs-labels.ts";
 import { documentMetadataFile } from "./doc-metadata.ts";
 
 /**
- * Markdown document discovered for the docs preview.
+ * Markdown document discovered for a structured docs artifact.
  */
 export interface MarkdownDoc {
   /**
-   * Stable HTML section id derived from the input path.
+   * Stable document id derived from the input path.
    */
   id: string;
   /**
-   * Logical Markdown input path used in generated preview UI and source links.
+   * Logical Markdown input path used in generated navigation and source links.
    */
   input: string;
   /**
-   * Logical project group used in preview navigation.
+   * Logical project group used in artifact navigation.
    */
   project: string;
   /** Central metadata file used by this documentation collection. */
@@ -48,74 +47,11 @@ export interface MarkdownDocSection {
   docs: MarkdownDoc[];
 }
 
-/**
- * Rendered SVG asset required by the generated docs preview.
- */
-export interface MermaidPreviewAsset {
-  /**
-   * Href written into the docs preview HTML.
-   */
-  href: string;
-  /**
-   * Generated diagram viewer HTML path.
-   */
-  pageTarget: string;
-  /**
-   * Optional project icon used by the generated diagram viewer tab.
-   */
-  projectIcon: ProjectIconPreviewAsset | null;
-  /**
-   * Repo-relative rendered SVG source path.
-   */
-  source: string;
-  /**
-   * Href to the copied SVG from the docs preview index.
-   */
-  svgHref: string;
-  /**
-   * Preview-output SVG path.
-   */
-  target: string;
-  /**
-   * Diagram title.
-   */
-  title: string;
-}
-
-/**
- * Project icon asset required by the generated docs preview.
- */
-export interface ProjectIconPreviewAsset {
-  /**
-   * Href written into the preview HTML.
-   */
-  href: string;
-  /**
-   * Project group this icon belongs to.
-   */
-  project: string;
-  /**
-   * Repo-relative project icon source path.
-   */
-  source: string;
-  /**
-   * Preview-output icon path.
-   */
-  target: string;
-}
-
-/**
- * Generated Markdown preview HTML path.
- */
-export const docsPreviewOutput = artifactPaths.docsPreview;
-
 const docsRoot = sourceInputDirs.docs;
 const logicalDocsRoot = repoDirs.docs;
 const artifactGeneratorProject = "artifact-generator";
 const generalDocsProject = "general-docs";
 const rootProject = "root";
-const projectIconFile = "mark.svg";
-const nonProjectIconGroups = new Set([rootProject, generalDocsProject, repoDirs.test]);
 const priorityDocGroups = new Map([
   [rootProject, 9000],
   [generalDocsProject, 9001],
@@ -125,6 +61,10 @@ const ignoredDirs = new Set([".git", repoDirs.coverage, repoDirs.dist, repoDirs.
 const ignoredFiles = new Set(["temp.md"]);
 const overviewDocSuffix = "-overview.md";
 const projectManifestPath = join(sourceInputDirs.manifests, "project-artifacts.json");
+
+interface ProjectArtifactManifest {
+  readonly projects?: Record<string, unknown>;
+}
 
 /**
  * Returns true when a path exists and is a directory.
@@ -260,12 +200,12 @@ function directMarkdownFiles(dir: string): string[] {
 }
 
 /**
- * Returns root-level pipeline docs for the Artifact Generator preview.
+ * Returns root-level pipeline docs for the Artifact Generator artifact.
  *
- * @param {string[]} roots - Resolved docs roots selected for this preview.
+ * @param {string[]} roots - Resolved docs roots selected for this artifact.
  * @returns {string[]} Shared Markdown paths that exist in this checkout.
  */
-function sharedPreviewDocs(roots: string[]): string[] {
+function sharedArtifactDocs(roots: string[]): string[] {
   const artifactGeneratorRoot = normalizeAbsolutePath(join(docsRoot, artifactGeneratorProject));
   const includesArtifactGenerator = roots.some(
     (root) => normalizeAbsolutePath(root) === artifactGeneratorRoot,
@@ -288,6 +228,30 @@ export function getDocRoots(args: string[]): string[] {
       .map(resolveDocRoot)
       .filter((root) => !isAllDocsRoot(root)),
   );
+}
+
+/**
+ * Resolves a requested docs project to a slug owned by the source manifest.
+ *
+ * Returning the manifest key, rather than the raw request, keeps command-line
+ * input from becoming a filesystem path.
+ *
+ * @param requestedProject - Project argument supplied to the docs build command.
+ * @param manifestPath - Shared project manifest that owns valid project slugs.
+ * @returns Trusted project slug from the shared manifest.
+ */
+export function artifactProjectSlug(
+  requestedProject: string,
+  manifestPath = projectManifestPath,
+): string {
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifest;
+  const project = Object.keys(manifest.projects ?? {}).find((slug) => slug === requestedProject);
+
+  if (project === undefined) {
+    throw new Error(`Unknown docs project: ${requestedProject}`);
+  }
+
+  return project;
 }
 
 /**
@@ -361,7 +325,7 @@ function sourceRootRelativePath(p: string, root: string): string | null {
 }
 
 /**
- * Returns true when a Markdown file should be omitted from docs preview.
+ * Returns true when a Markdown file should be omitted from docs artifacts.
  *
  * @param {string} p - Repo-relative Markdown path.
  * @returns {boolean} Whether the file should be omitted.
@@ -371,7 +335,7 @@ function isIgnoredMarkdownFile(p: string): boolean {
 }
 
 /**
- * Converts a Markdown path to a stable HTML anchor id.
+ * Converts a Markdown path to a stable document id.
  *
  * @param {string} p - Repo-relative Markdown path.
  * @returns {string} Stable document id.
@@ -499,7 +463,7 @@ function documentMetadataPath(sourcePath: string, input: string, project: string
  * Finds Markdown docs under selected roots.
  *
  * @param {string[]} roots - Directories to scan.
- * @returns {MarkdownDoc[]} Markdown docs for preview rendering.
+ * @returns {MarkdownDoc[]} Markdown docs for artifact compilation.
  */
 export function findMarkdownDocs(roots: string[] = []): MarkdownDoc[] {
   if (roots.length === 0) return [];
@@ -510,7 +474,7 @@ export function findMarkdownDocs(roots: string[] = []): MarkdownDoc[] {
 
   const docsByInput = new Map<string, MarkdownDoc>();
 
-  for (const path of uniqueStrings([...sharedPreviewDocs(roots), ...scannedDocs])) {
+  for (const path of uniqueStrings([...sharedArtifactDocs(roots), ...scannedDocs])) {
     const doc = markdownDoc(path);
     if (!docsByInput.has(doc.input)) docsByInput.set(doc.input, doc);
   }
@@ -584,7 +548,7 @@ function docGroupPriority(
 }
 
 /**
- * Orders Markdown docs groups for the preview sidebar.
+ * Orders Markdown docs groups for artifact navigation.
  *
  * @param {MarkdownDoc[]} docs - Markdown docs to group and order.
  * @returns {MarkdownDocGroup[]} Ordered docs groups.
@@ -630,99 +594,26 @@ export function orderedDocSections(docs: MarkdownDoc[]): MarkdownDocSection[] {
 }
 
 /**
- * Flattens docs into the exact order used by the preview sidebar.
+ * Flattens docs into the exact order used by artifact navigation.
  *
  * The rendered document body should use this same order so scrolling through
- * the page matches the left navigation from top to bottom.
+ * the collection keeps a predictable reading sequence.
  *
- * @param {MarkdownDoc[]} docs - Markdown docs included in the preview.
+ * @param {MarkdownDoc[]} docs - Markdown docs included in the artifact.
  * @returns {MarkdownDoc[]} Docs ordered by sidebar group, section, and link order.
  */
-export function orderedDocsForPreview(docs: MarkdownDoc[]): MarkdownDoc[] {
+export function orderedDocsForArtifact(docs: MarkdownDoc[]): MarkdownDoc[] {
   return orderedDocGroups(docs).flatMap(([, projectDocs]) =>
     orderedDocSections(projectDocs).flatMap((section) => section.docs),
   );
 }
 
 /**
- * Builds the page title for a scoped docs preview.
- *
- * Shared root/general/test docs are included in every preview, so the title is
- * based on the selected project group when exactly one project is present.
- *
- * @param {MarkdownDoc[]} docs - Markdown docs included in the preview.
- * @returns {string} Preview title.
- */
-export function docsPreviewTitle(docs: MarkdownDoc[]): string {
-  const projectGroups = orderedDocGroups(docs).filter(
-    ([group]) => !nonProjectIconGroups.has(group),
-  );
-
-  if (projectGroups.length === 1) {
-    const [project] = projectGroups[0]!;
-    return docGroupTitle(project);
-  }
-
-  return projectGroups.length > 1 ? "Project Documentation" : "Documentation Preview";
-}
-
-/**
- * Resolves a project icon into the generated preview bundle.
- *
- * Project icons are optional. When the S3 source cache contains
- * `icons/<project>/mark.svg`, the preview references the copied asset at the
- * same relative path under `dist/docs-preview`.
- *
- * @param {string} project - Documentation project group name.
- * @returns {ProjectIconPreviewAsset | null} Icon asset when one exists.
- */
-export function projectIconAsset(project: string): ProjectIconPreviewAsset | null {
-  if (nonProjectIconGroups.has(project)) return null;
-
-  const source = normalizeRepoPath(join(sourceInputDirs.icons, project, projectIconFile));
-  if (!existsSync(source)) return null;
-
-  const iconHref = normalizeRepoPath(join(repoDirs.icons, project, projectIconFile));
-  const target = normalizeRepoPath(join(dirname(docsPreviewOutput), iconHref));
-
-  return {
-    href: normalizeRepoPath(relative(dirname(docsPreviewOutput), target)),
-    project,
-    source,
-    target,
-  };
-}
-
-/**
- * Returns unique project icon assets referenced by selected preview docs.
- *
- * @param {MarkdownDoc[]} docs - Markdown docs included in the preview.
- * @returns {ProjectIconPreviewAsset[]} Unique project icon assets.
- */
-export function projectIconAssetsForDocs(docs: MarkdownDoc[]): ProjectIconPreviewAsset[] {
-  const assets = docs
-    .map((doc) => projectIconAsset(doc.project))
-    .filter((asset): asset is ProjectIconPreviewAsset => asset !== null);
-
-  return [...new Map(assets.map((asset) => [asset.target, asset])).values()];
-}
-
-/**
- * Returns the first project icon in preview order for page-level chrome.
- *
- * @param {MarkdownDoc[]} docs - Markdown docs included in the preview.
- * @returns {ProjectIconPreviewAsset | null} Primary project icon when one exists.
- */
-export function primaryProjectIconAsset(docs: MarkdownDoc[]): ProjectIconPreviewAsset | null {
-  return projectIconAssetsForDocs(docs).at(0) ?? null;
-}
-
-/**
- * Resolves a local Markdown href to a selected preview document id.
+ * Resolves a local Markdown href to a selected artifact document id.
  *
  * @param {MarkdownDoc} source - Source document containing the link.
  * @param {string} href - Link target.
- * @param {Map<string, string>} idsByPath - Preview document ids keyed by path.
+ * @param {Map<string, string>} idsByPath - Artifact document ids keyed by path.
  * @returns {string | null} Target document id when the href points to a selected doc.
  */
 export function localMarkdownTargetId(
@@ -740,53 +631,6 @@ export function localMarkdownTargetId(
 }
 
 /**
- * Resolves a local Mermaid source link to its rendered SVG preview asset.
- *
- * @param {MarkdownDoc} source - Source document containing the link.
- * @param {string} href - Link target.
- * @returns {MermaidPreviewAsset | null} Rendered SVG asset metadata.
- */
-export function localMermaidTarget(source: MarkdownDoc, href: string): MermaidPreviewAsset | null {
-  if (/^[a-z]+:/i.test(href) || href.startsWith("#")) return null;
-
-  const [targetPath] = href.split("#");
-  if (!targetPath?.endsWith(".mmd")) return null;
-
-  const mermaidPath = normalizeRepoPath(join(dirname(source.input), targetPath));
-  const mermaidSourcePath = source.sourcePath ? physicalArtifactPath(mermaidPath) : mermaidPath;
-  if (!existsSync(mermaidSourcePath)) return null;
-
-  const svgPath = normalizeRepoPath(
-    diagramOutputPath(mermaidPath, readDiagramMetadata(mermaidSourcePath)),
-  );
-  const svgSourcePath = source.sourcePath ? physicalArtifactPath(svgPath) : svgPath;
-  const previewSvgPath = normalizeRepoPath(join(dirname(docsPreviewOutput), svgPath));
-  const previewPagePath = previewSvgPath.replace(/\.svg$/, ".html");
-  const svgHref = normalizeRepoPath(relative(dirname(docsPreviewOutput), previewSvgPath));
-
-  return {
-    href: normalizeRepoPath(relative(dirname(docsPreviewOutput), previewPagePath)),
-    pageTarget: previewPagePath,
-    projectIcon: projectIconAsset(source.project),
-    source: svgSourcePath,
-    svgHref,
-    target: previewSvgPath,
-    title: formatDocLabel(basename(mermaidPath, ".mmd")),
-  };
-}
-
-/**
- * Resolves a local Mermaid source link to its rendered SVG preview href.
- *
- * @param {MarkdownDoc} source - Source document containing the link.
- * @param {string} href - Link target.
- * @returns {string | null} Rendered SVG href when the href points to a local Mermaid source.
- */
-export function localMermaidTargetHref(source: MarkdownDoc, href: string): string | null {
-  return localMermaidTarget(source, href)?.href ?? null;
-}
-
-/**
  * Returns the cached local path for a discovered document.
  *
  * @param doc - Markdown document metadata.
@@ -797,38 +641,10 @@ export function markdownSourcePath(doc: MarkdownDoc): string {
 }
 
 /**
- * Converts a logical artifact path into its S3-synced source cache path.
- *
- * @param p - Logical docs, diagrams, or icon path.
- * @returns Cached local source path when the path belongs to synced inputs.
- */
-function physicalArtifactPath(p: string): string {
-  const normalized = normalizeRepoPath(p);
-
-  if (normalized.startsWith(`${logicalDocsRoot}/`)) {
-    return normalizeRepoPath(join(docsRoot, normalized.slice(logicalDocsRoot.length + 1)));
-  }
-
-  if (normalized.startsWith(`${repoDirs.diagrams}/`)) {
-    return normalizeRepoPath(
-      join(sourceInputDirs.diagrams, normalized.slice(repoDirs.diagrams.length + 1)),
-    );
-  }
-
-  if (normalized.startsWith(`${repoDirs.icons}/`)) {
-    return normalizeRepoPath(
-      join(sourceInputDirs.icons, normalized.slice(repoDirs.icons.length + 1)),
-    );
-  }
-
-  return normalized;
-}
-
-/**
  * Converts a cached local source path into its public logical artifact path.
  *
  * @param p - Local source path.
- * @returns Logical path used in generated artifact HTML.
+ * @returns Logical path used in generated artifacts.
  */
 function logicalArtifactPath(p: string): string {
   const normalized = normalizeRepoPath(p);
