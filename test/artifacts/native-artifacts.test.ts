@@ -25,7 +25,7 @@ const { buildDocsArtifact, compileMarkdownBlocks } =
   await import("../../scripts/docs/document-artifact.ts");
 const { buildSiteContentArtifact } = await import("../../scripts/content/build-site-content.ts");
 const {
-  addVersionedDiagramPaths,
+  compileProjectArtifactManifest,
   assembleSiteArtifacts,
   cleanPublishOutputs,
   copyRenderedDiagrams,
@@ -281,7 +281,17 @@ describe("native project artifacts", () => {
         workspacePath(join(publishOutputs.siteArtifacts, "manifests", "project-artifacts.json")),
         "utf8",
       ),
-    ) as { projects: { "artifact-generator": { diagrams: Array<{ svgPath: string }> } } };
+    ) as {
+      projects: {
+        "artifact-generator": {
+          changelog: { markdownPath: string; pdfPath: string };
+          coverage: { indexPath: string; pdfPath: string };
+          diagrams: Array<{ overview?: boolean; svgPath: string }>;
+          docs: { indexPath: string; pdfPath: string };
+        };
+      };
+      schemaVersion: number;
+    };
 
     expect(assembled).toMatchObject({ diagramCount: 1 });
     expect(
@@ -321,9 +331,32 @@ describe("native project artifacts", () => {
       existsSync(workspacePath(join(publishOutputs.siteAssets, "icons", "artifact-generator.svg"))),
     ).toBe(true);
     expect(publicManifest.profile).toBeUndefined();
-    expect(projectManifest.projects["artifact-generator"].diagrams[0]?.svgPath).toBe(
-      "diagrams/artifact-generator/artifact-generator-overview-v1.7.4-2026-08-27.svg",
-    );
+    expect(projectManifest).toMatchObject({
+      projects: {
+        "artifact-generator": {
+          changelog: {
+            markdownPath: "projects/artifact-generator/changelog/CHANGELOG.md",
+            pdfPath: "projects/artifact-generator/changelog/changelog.pdf",
+          },
+          coverage: {
+            indexPath: "projects/artifact-generator/coverage/index.json",
+            pdfPath: "projects/artifact-generator/coverage/coverage.pdf",
+          },
+          diagrams: [
+            {
+              overview: true,
+              svgPath:
+                "diagrams/artifact-generator/artifact-generator-overview-v1.7.4-2026-08-27.svg",
+            },
+          ],
+          docs: {
+            indexPath: "docs/artifact-generator/index.json",
+            pdfPath: "docs/artifact-generator/docs.pdf",
+          },
+        },
+      },
+      schemaVersion: 2,
+    });
 
     inWorkspace(() => cleanPublishOutputs());
     removeWorkspacePath("dist/docs-artifacts");
@@ -336,13 +369,14 @@ describe("native project artifacts", () => {
       JSON.stringify({
         projects: {
           cipher: {
-            diagrams: [{ svgPath: "notpaths/artifact-generator/artifact-generator-overview.svg" }],
+            diagramPaths: ["notpaths/artifact-generator/artifact-generator-overview.svg"],
+            iconPath: "asset://icons/cipher/mark.svg",
           },
         },
       }),
     );
-    expect(() => inWorkspace(() => addVersionedDiagramPaths(invalidManifest))).toThrow(
-      "must be an SVG below diagrams",
+    expect(() => inWorkspace(() => compileProjectArtifactManifest(invalidManifest))).toThrow(
+      "requires at least one diagram",
     );
   });
 });
@@ -394,9 +428,15 @@ function seedProjectInputs(): void {
       {
         projects: {
           "artifact-generator": {
-            diagrams: [{ svgPath: "diagrams/artifact-generator/artifact-generator-overview.svg" }],
+            diagramPaths: ["diagrams/artifact-generator/artifact-generator-overview.svg"],
+            iconPath: "asset://icons/artifact-generator/mark.svg",
+            overviewDiagramPath: "diagrams/artifact-generator/artifact-generator-overview.svg",
           },
-          cipher: {},
+          cipher: {
+            diagramPaths: ["diagrams/cipher/cipher-overview.svg"],
+            iconPath: "asset://icons/cipher/mark.svg",
+            overviewDiagramPath: "diagrams/cipher/cipher-overview.svg",
+          },
         },
       },
       null,
@@ -489,6 +529,10 @@ function seedProjectInputs(): void {
   writeSource(
     "artifacts/diagrams/artifact-generator/artifact-generator-overview-v1.7.4-2026-08-27.svg",
     '<svg viewBox="0 0 100 100" />\n',
+  );
+  writeSource(
+    "artifacts/diagrams/cipher/cipher-overview.mmd",
+    "%% artifact-generator:version=1.7.4 lastUpdated=2026-08-27\nflowchart LR\n  A --> B\n",
   );
   writeSource("assets/icons/artifact-generator.svg", '<svg viewBox="0 0 1 1" />\n');
 }

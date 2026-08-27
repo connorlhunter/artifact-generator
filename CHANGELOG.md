@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.5 - 2026-08-27
+
+### Fixed
+
+- Compile the project artifact manifest into the native Portfolio contract before publishing.
+
 ## 1.7.4 - 2026-08-27
 
 ### Changed
