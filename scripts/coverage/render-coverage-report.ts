@@ -5,175 +5,128 @@ import { isEntrypoint } from "../core/script-entry.ts";
 import { logCaughtError, logSuccess } from "../core/script-logger.ts";
 import { validateUpdatedDate } from "../core/versioned-artifact-metadata.ts";
 
-interface CoverageMetric {
-  covered: number;
-  found: number;
+/** A coverage count used by the Portfolio coverage reader. */
+export interface CoverageMetric {
+  readonly covered: number;
+  readonly found: number;
 }
 
-interface CoverageFile {
-  path: string;
-  lines: CoverageMetric;
-  functions: CoverageMetric;
-  branches: CoverageMetric;
+/** One source file reported by Bun's LCOV output. */
+export interface CoverageFile {
+  readonly branches: CoverageMetric;
+  readonly functions: CoverageMetric;
+  readonly lines: CoverageMetric;
+  readonly path: string;
+}
+
+/** Public JSON contract for the Artifact Generator coverage surface. */
+export interface CoverageArtifact {
+  readonly minimumCoverage: { readonly functions: number; readonly lines: number };
+  readonly schemaVersion: 2;
+  readonly surfaces: ReadonlyArray<{
+    readonly files: ReadonlyArray<CoverageFile>;
+    readonly id: string;
+    readonly label: string;
+    readonly totals: CoverageFile;
+  }>;
+  readonly updatedAt: string;
 }
 
 export interface CoverageThresholds {
-  /**
-   * Minimum global function coverage percentage.
-   */
-  functions: number;
-  /**
-   * Minimum global line coverage percentage.
-   */
-  lines: number;
+  readonly functions: number;
+  readonly lines: number;
 }
 
-/**
- * Optional project-owned coverage publication metadata.
- */
+/** Optional project-owned coverage publication metadata. */
 export interface RenderCoverageReportOptions {
-  /**
-   * ISO publication timestamp supplied by this project's coverage workflow.
-   */
   readonly updatedAt?: string;
 }
 
-const defaultCoverageThresholds: CoverageThresholds = {
-  functions: 95,
-  lines: 95,
-};
+const defaultCoverageThresholds: CoverageThresholds = { functions: 95, lines: 95 };
 
-const emptyMetric = (): CoverageMetric => ({ covered: 0, found: 0 });
+function emptyMetric(): CoverageMetric {
+  return { covered: 0, found: 0 };
+}
 
-/**
- * Parses Bun's LCOV output into per-file coverage records.
- *
- * @param {string} lcov - Raw LCOV contents.
- * @returns {CoverageFile[]} Coverage records.
- */
+/** Parses Bun's LCOV output into per-file coverage records. */
 export function parseLcov(lcov: string): CoverageFile[] {
   const files: CoverageFile[] = [];
-  let current: CoverageFile | null = null;
+  let current: CoverageFile | undefined;
 
-  for (const line of lcov.split(/\r?\n/)) {
+  for (const line of lcov.split(/\r?\n/u)) {
     if (line.startsWith("SF:")) {
       current = {
-        path: line.slice(3),
-        lines: emptyMetric(),
-        functions: emptyMetric(),
         branches: emptyMetric(),
+        functions: emptyMetric(),
+        lines: emptyMetric(),
+        path: line.slice(3),
       };
       continue;
     }
 
     if (!current) continue;
 
-    applyMetricLine(current, line);
+    if (line.startsWith("LF:")) current = { ...current, lines: { ...current.lines, found: value(line) } };
+    if (line.startsWith("LH:")) current = { ...current, lines: { ...current.lines, covered: value(line) } };
+    if (line.startsWith("FNF:")) current = { ...current, functions: { ...current.functions, found: value(line) } };
+    if (line.startsWith("FNH:")) current = { ...current, functions: { ...current.functions, covered: value(line) } };
+    if (line.startsWith("BRF:")) current = { ...current, branches: { ...current.branches, found: value(line) } };
+    if (line.startsWith("BRH:")) current = { ...current, branches: { ...current.branches, covered: value(line) } };
 
     if (line === "end_of_record") {
       files.push(current);
-      current = null;
+      current = undefined;
     }
   }
 
   return files;
 }
 
-function applyMetricLine(file: CoverageFile, line: string): void {
-  if (line.startsWith("LF:")) file.lines.found = numberValue(line);
-  else if (line.startsWith("LH:")) file.lines.covered = numberValue(line);
-  else if (line.startsWith("FNF:")) file.functions.found = numberValue(line);
-  else if (line.startsWith("FNH:")) file.functions.covered = numberValue(line);
-  else if (line.startsWith("BRF:")) file.branches.found = numberValue(line);
-  else if (line.startsWith("BRH:")) file.branches.covered = numberValue(line);
-}
-
-function numberValue(line: string): number {
+function value(line: string): number {
   return Number(line.split(":")[1] ?? 0);
 }
 
-function totals(files: CoverageFile[]): CoverageFile {
+function addMetric(left: CoverageMetric, right: CoverageMetric): CoverageMetric {
+  return { covered: left.covered + right.covered, found: left.found + right.found };
+}
+
+/** Aggregates source records into one reader-friendly total. */
+export function coverageTotals(files: ReadonlyArray<CoverageFile>): CoverageFile {
   return files.reduce<CoverageFile>(
     (total, file) => ({
-      path: "All files",
-      lines: addMetric(total.lines, file.lines),
-      functions: addMetric(total.functions, file.functions),
       branches: addMetric(total.branches, file.branches),
-    }),
-    {
+      functions: addMetric(total.functions, file.functions),
+      lines: addMetric(total.lines, file.lines),
       path: "All files",
-      lines: emptyMetric(),
-      functions: emptyMetric(),
-      branches: emptyMetric(),
-    },
+    }),
+    { branches: emptyMetric(), functions: emptyMetric(), lines: emptyMetric(), path: "All files" },
   );
 }
 
-function addMetric(left: CoverageMetric, right: CoverageMetric): CoverageMetric {
-  return {
-    covered: left.covered + right.covered,
-    found: left.found + right.found,
-  };
-}
-
 function percent(metric: CoverageMetric): number {
-  if (metric.found === 0) return 100;
-  return (metric.covered / metric.found) * 100;
+  return metric.found === 0 ? 100 : (metric.covered / metric.found) * 100;
 }
 
-function percentLabel(metric: CoverageMetric): string {
-  return `${percent(metric).toFixed(2)}%`;
+function assertCoverageThresholds(files: ReadonlyArray<CoverageFile>, thresholds: CoverageThresholds): void {
+  const total = coverageTotals(files);
+  const failures = [
+    { actual: percent(total.lines), minimum: thresholds.lines, name: "lines" },
+    { actual: percent(total.functions), minimum: thresholds.functions, name: "functions" },
+  ]
+    .filter((item) => item.actual < item.minimum)
+    .map((item) => `${item.name} ${item.actual.toFixed(2)}% < ${item.minimum.toFixed(2)}%`);
+
+  if (failures.length > 0) throw new Error(`Coverage threshold failed: ${failures.join(", ")}`);
 }
 
-function assertCoverageThresholds(
-  files: CoverageFile[],
-  thresholds: CoverageThresholds,
-): void {
-  const total = totals(files);
-  const linePercent = percent(total.lines);
-  const functionPercent = percent(total.functions);
-  const failures: string[] = [];
-
-  if (linePercent < thresholds.lines) {
-    failures.push(`lines ${linePercent.toFixed(2)}% < ${thresholds.lines.toFixed(2)}%`);
-  }
-
-  if (functionPercent < thresholds.functions) {
-    failures.push(
-      `functions ${functionPercent.toFixed(2)}% < ${thresholds.functions.toFixed(2)}%`,
-    );
-  }
-
-  if (failures.length > 0) {
-    throw new Error(`Coverage threshold failed: ${failures.join(", ")}`);
-  }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-/**
- * Normalizes an Artifact Generator coverage publication time to ISO UTC.
- *
- * @param value - Candidate timestamp.
- * @returns Canonical ISO UTC timestamp.
- */
+/** Normalizes a coverage publication timestamp to canonical UTC. */
 export function coverageUpdatedAt(value: string): string {
-  const isoTimestampPattern =
-    /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u;
   const timestamp = new Date(value);
 
-  if (!isoTimestampPattern.test(value) || Number.isNaN(timestamp.getTime())) {
-    throw new Error(`Invalid coverage publication date: ${value}`);
-  }
+  if (Number.isNaN(timestamp.getTime())) throw new Error(`Invalid coverage publication date: ${value}`);
 
   try {
-    validateUpdatedDate(value.slice(0, 10), "coverage publication date");
+    validateUpdatedDate(timestamp.toISOString().slice(0, 10), "coverage publication date");
   } catch {
     throw new Error(`Invalid coverage publication date: ${value}`);
   }
@@ -181,490 +134,55 @@ export function coverageUpdatedAt(value: string): string {
   return timestamp.toISOString();
 }
 
-/** Formats the timestamp displayed in the coverage header and PDF. */
-function coverageUpdatedAtLabel(value: string): string {
-  const date = new Date(value);
-  const month = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ][date.getUTCMonth()];
-  return `${month} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
-}
-
-function metricCell(metric: CoverageMetric): string {
-  return `<td>${percentLabel(metric)} <span>${metric.covered}/${metric.found}</span></td>`;
-}
-
-function fileRow(file: CoverageFile): string {
-  return `<tr>
-    <th scope="row">${escapeHtml(file.path)}</th>
-    ${metricCell(file.lines)}
-    ${metricCell(file.functions)}
-    ${metricCell(file.branches)}
-  </tr>`;
-}
-
-const coverageThemeStorageKeys = ["connorhunter.theme.scheme", "portfolio.theme.scheme"] as const;
-const coverageThemeSchemes = {
-  atlas: {
-    accent: "#0f6b7a",
-    accentSoft: "#e4f3f5",
-    bg: "#f4f6f8",
-    border: "#d8dee8",
-    colorScheme: "light",
-    muted: "#667085",
-    panel: "#ffffff",
-    text: "#17202a",
-  },
-  paper: {
-    accent: "#68737a",
-    accentSoft: "#ecefed",
-    bg: "#f6f6f3",
-    border: "#dcdfdc",
-    colorScheme: "light",
-    muted: "#697176",
-    panel: "#ffffff",
-    text: "#1f2528",
-  },
-  citrine: {
-    accent: "#766f18",
-    accentSoft: "#eeebc7",
-    bg: "#f7f6ea",
-    border: "#dedbb8",
-    colorScheme: "light",
-    muted: "#70705c",
-    panel: "#fffef8",
-    text: "#20231a",
-  },
-  harbor: {
-    accent: "#35b8cd",
-    accentSoft: "#0e2f3a",
-    bg: "#111a24",
-    border: "#2a3a4c",
-    colorScheme: "dark",
-    muted: "#7d92a8",
-    panel: "#1a2636",
-    text: "#dde4ee",
-  },
-  midnight: {
-    accent: "#5fc0ee",
-    accentSoft: "#0d3040",
-    bg: "#06111a",
-    border: "#1f3547",
-    colorScheme: "dark",
-    muted: "#89a6b8",
-    panel: "#0b1a24",
-    text: "#eaf6ff",
-  },
-  onyx: {
-    accent: "#8fb4ff",
-    accentSoft: "#182234",
-    bg: "#0b0d10",
-    border: "#2a3139",
-    colorScheme: "dark",
-    muted: "#9aa4ad",
-    panel: "#14181d",
-    text: "#edf0f2",
-  },
-  rose: {
-    accent: "#9e4c58",
-    accentSoft: "#f1e6e8",
-    bg: "#fbf6f7",
-    border: "#e2d2d5",
-    colorScheme: "light",
-    muted: "#74676b",
-    panel: "#ffffff",
-    text: "#241b1e",
-  },
-  tide: {
-    accent: "#3f82a8",
-    accentSoft: "#e4f0f6",
-    bg: "#f2f8fb",
-    border: "#d2e2ea",
-    colorScheme: "light",
-    muted: "#627584",
-    panel: "#ffffff",
-    text: "#17242c",
-  },
-  ember: {
-    accent: "#df6532",
-    accentSoft: "#ffe8d8",
-    bg: "#fff7e8",
-    border: "#efd8bd",
-    colorScheme: "light",
-    muted: "#7a6658",
-    panel: "#fffdf9",
-    text: "#251a12",
-  },
-  quartz: {
-    accent: "#7c6f9f",
-    accentSoft: "#eeeaf8",
-    bg: "#f7f5fb",
-    border: "#ddd7ed",
-    colorScheme: "light",
-    muted: "#706b7a",
-    panel: "#ffffff",
-    text: "#211f29",
-  },
-} as const;
-
-function coverageThemeCss(): string {
-  const themeBlocks = Object.entries(coverageThemeSchemes)
-    .map(
-      ([scheme, tokens]) => `:root[data-scheme="${scheme}"] {
-      color-scheme: ${tokens.colorScheme};
-      --bg: ${tokens.bg};
-      --panel: ${tokens.panel};
-      --text: ${tokens.text};
-      --muted: ${tokens.muted};
-      --border: ${tokens.border};
-      --accent: ${tokens.accent};
-      --accent-soft: ${tokens.accentSoft};
-    }`,
-    )
-    .join("\n\n    ");
-
-  const atlas = coverageThemeSchemes.atlas;
-
-  return `:root {
-      color-scheme: ${atlas.colorScheme};
-      --bg: ${atlas.bg};
-      --panel: ${atlas.panel};
-      --text: ${atlas.text};
-      --muted: ${atlas.muted};
-      --border: ${atlas.border};
-      --accent: ${atlas.accent};
-      --accent-soft: ${atlas.accentSoft};
-    }
-
-    ${themeBlocks}`;
-}
-
-function coverageThemeScript(): string {
-  return `<script>
-    (() => {
-      const schemes = new Set(${JSON.stringify(Object.keys(coverageThemeSchemes))});
-      const storageKeys = ${JSON.stringify([...coverageThemeStorageKeys])};
-      const messageSuffix = ".theme.scheme";
-      const fullscreenMessageType = "connorhunter.file-viewer.enter-fullscreen";
-      const doubleTapDelay = 360;
-      const doubleTapDistance = 28;
-      const interactiveSelector = 'a, button, input, select, textarea, summary, [role="button"], [contenteditable="true"], [data-fullscreen-gesture-ignore]';
-      const fallback = window.matchMedia?.("(prefers-color-scheme: dark)").matches
-        ? "midnight"
-        : "atlas";
-      let lastTouch = null;
-      let suppressDoubleClickUntil = 0;
-
-      function savedScheme() {
-        for (const key of storageKeys) {
-          try {
-            const value = window.localStorage.getItem(key);
-            if (schemes.has(value)) return value;
-          } catch {}
-        }
-        return null;
-      }
-
-      function applyScheme(scheme) {
-        if (!schemes.has(scheme)) return;
-        document.documentElement.dataset.scheme = scheme;
-        try {
-          window.localStorage.setItem(storageKeys[0], scheme);
-        } catch {}
-      }
-
-      function isInteractiveTarget(target) {
-        return target instanceof Element && Boolean(target.closest(interactiveSelector));
-      }
-
-      function requestHostFullscreen() {
-        if (window.parent === window) return;
-        window.parent.postMessage({ type: fullscreenMessageType }, "*");
-      }
-
-      applyScheme(savedScheme() || fallback);
-
-      window.addEventListener("message", (event) => {
-        const message = event.data;
-        if (!message || typeof message !== "object") return;
-        if (!schemes.has(message.scheme)) return;
-        if (typeof message.type === "string" && !message.type.endsWith(messageSuffix)) return;
-        applyScheme(message.scheme);
-      });
-
-      document.addEventListener("dblclick", (event) => {
-        if (event.timeStamp <= suppressDoubleClickUntil) {
-          suppressDoubleClickUntil = 0;
-          return;
-        }
-        if (isInteractiveTarget(event.target)) return;
-
-        event.preventDefault();
-        requestHostFullscreen();
-      });
-
-      document.addEventListener("pointerup", (event) => {
-        if (event.pointerType !== "touch") return;
-        if (isInteractiveTarget(event.target)) {
-          lastTouch = null;
-          return;
-        }
-
-        const currentTouch = { at: event.timeStamp, x: event.clientX, y: event.clientY };
-        const elapsed = lastTouch ? currentTouch.at - lastTouch.at : Number.POSITIVE_INFINITY;
-        const distance = lastTouch
-          ? Math.hypot(currentTouch.x - lastTouch.x, currentTouch.y - lastTouch.y)
-          : Number.POSITIVE_INFINITY;
-
-        if (elapsed >= 0 && elapsed <= doubleTapDelay && distance <= doubleTapDistance) {
-          lastTouch = null;
-          suppressDoubleClickUntil = currentTouch.at + doubleTapDelay;
-          event.preventDefault();
-          requestHostFullscreen();
-          return;
-        }
-
-        lastTouch = currentTouch;
-      });
-    })();
-  </script>`;
-}
-
-/**
- * Renders a compact HTML coverage report from parsed LCOV records.
- *
- * @param {CoverageFile[]} files - Coverage records.
- * @param {string} updatedAt - Project-owned coverage publication timestamp.
- * @returns {string} Standalone HTML report.
- */
-export function renderCoverageHtml(files: CoverageFile[], updatedAt: string): string {
-  const total = totals(files);
-  const rows = [total, ...files].map(fileRow).join("\n");
-  const publicationTimestamp = coverageUpdatedAt(updatedAt);
-
-  return `<!doctype html>
-<html data-scheme="atlas" lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Artifact Generator Coverage</title>
-  <style>
-    ${coverageThemeCss()}
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 0.9375rem/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      touch-action: manipulation;
-    }
-
-    main {
-      width: min(100%, 72rem);
-      margin: 0 auto;
-      padding: clamp(1.25rem, 4vw, 3rem);
-    }
-
-    header {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 1.25rem;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(1.75rem, 4vw, 2.75rem);
-      line-height: 1.05;
-    }
-
-    p {
-      margin: 0.5rem 0 0;
-      color: var(--muted);
-    }
-
-    .table-wrap {
-      overflow: auto;
-      border: 1px solid var(--border);
-      border-radius: 0.5rem;
-      background: var(--panel);
-    }
-
-    table {
-      width: 100%;
-      min-width: 46rem;
-      border-collapse: collapse;
-    }
-
-    th,
-    td {
-      border-bottom: 1px solid var(--border);
-      padding: 0.85rem 1rem;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    thead th {
-      color: var(--muted);
-      font-size: 0.75rem;
-      letter-spacing: 0;
-      text-transform: uppercase;
-    }
-
-    tbody tr:first-child {
-      background: color-mix(in srgb, var(--accent) 10%, transparent);
-      font-weight: 800;
-    }
-
-    tbody tr:last-child th,
-    tbody tr:last-child td {
-      border-bottom: 0;
-    }
-
-    td span {
-      display: block;
-      color: var(--muted);
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    @media print {
-      @page {
-        size: letter landscape;
-        margin: 0.45in;
-      }
-
-      :root {
-        color-scheme: light !important;
-        --accent: #0f6b7a !important;
-        --accent-soft: #e4f3f5 !important;
-        --bg: #f4f6f8 !important;
-        --border: #d8dee8 !important;
-        --muted: #667085 !important;
-        --panel: #ffffff !important;
-        --text: #17202a !important;
-      }
-
-      html,
-      body {
-        background: #ffffff;
-        color: #17202a;
-      }
-
-      main {
-        width: 100%;
-        padding: 0;
-      }
-
-      header {
-        margin-bottom: 0.75rem;
-      }
-
-      .table-wrap {
-        overflow: visible;
-        border: 0;
-      }
-
-      table {
-        min-width: 0;
-      }
-
-      th,
-      td {
-        padding: 0.45rem 0.55rem;
-      }
-
-      th:first-child {
-        overflow-wrap: anywhere;
-      }
-    }
-  </style>
-  ${coverageThemeScript()}
-</head>
-<body>
-  <main>
-    <header>
-      <div>
-        <h1>Artifact Generator Coverage</h1>
-        <p>Required minimum: 95% lines and functions. Generated from the Bun test suite for Artifact Generator.</p>
-        <p>Updated <time datetime="${escapeHtml(publicationTimestamp)}">${escapeHtml(coverageUpdatedAtLabel(publicationTimestamp))}</time></p>
-      </div>
-    </header>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">File</th>
-            <th scope="col">Lines</th>
-            <th scope="col">Functions</th>
-            <th scope="col">Branches</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows}
-        </tbody>
-      </table>
-    </div>
-  </main>
-</body>
-</html>`;
-}
-
-/**
- * Writes the HTML coverage report expected by `coverage:open`.
- *
- * @param {string} lcovPath - LCOV input path.
- * @param {string} outputPath - HTML output path.
- * @param {CoverageThresholds} thresholds - Minimum accepted global coverage values.
- * @param {RenderCoverageReportOptions} options - Project-owned publication date override.
- * @returns {Promise<string>} Written HTML path.
- */
-export async function renderCoverageReport(
-  lcovPath: string = artifactPaths.coverageLcov,
-  outputPath: string = artifactPaths.coverageReport,
+/** Builds the public JSON model from one LCOV report. */
+export function coverageArtifact(
+  files: ReadonlyArray<CoverageFile>,
+  updatedAt: string,
   thresholds: CoverageThresholds = defaultCoverageThresholds,
+): CoverageArtifact {
+  assertCoverageThresholds(files, thresholds);
+
+  return {
+    minimumCoverage: { functions: thresholds.functions, lines: thresholds.lines },
+    schemaVersion: 2,
+    surfaces: [
+      {
+        files: [...files].sort((left, right) => left.path.localeCompare(right.path)),
+        id: "typescript",
+        label: "TypeScript",
+        totals: coverageTotals(files),
+      },
+    ],
+    updatedAt: coverageUpdatedAt(updatedAt),
+  };
+}
+
+/** Writes Artifact Generator coverage as structured JSON. */
+export async function renderCoverageReport(
+  lcovPath = artifactPaths.coverageLcov,
+  outputPath = artifactPaths.coverageReport,
+  thresholds = defaultCoverageThresholds,
   options: RenderCoverageReportOptions = {},
 ): Promise<string> {
-  const updatedAt = options.updatedAt ?? new Date().toISOString();
-  const files = parseLcov(await readText(lcovPath));
-  ensureDirectory(dirname(outputPath));
-  await writeText(outputPath, renderCoverageHtml(files, updatedAt));
-  assertCoverageThresholds(files, thresholds);
-  logSuccess(`Rendered HTML coverage report: ${outputPath}`);
-  return outputPath;
-}
+  const artifact = coverageArtifact(
+    parseLcov(await readText(lcovPath)),
+    options.updatedAt ?? new Date().toISOString(),
+    thresholds,
+  );
 
-/** Runs coverage-report rendering and returns its process exit code. */
-export async function renderCoverageReportCli(
-  render: () => Promise<string> = () => renderCoverageReport(),
-  reportError: (error: unknown) => void = logCaughtError,
-): Promise<number> {
-  try {
-    await render();
-    return 0;
-  } catch (error) {
-    reportError(error);
-    return 1;
-  }
+  ensureDirectory(dirname(outputPath));
+  await writeText(outputPath, `${JSON.stringify(artifact, null, 2)}\n`);
+  logSuccess(`Rendered coverage artifact: ${outputPath}`);
+
+  return outputPath;
 }
 
 /* istanbul ignore next */
 if (isEntrypoint(import.meta.url)) {
-  process.exitCode = await renderCoverageReportCli();
+  try {
+    await renderCoverageReport();
+  } catch (error) {
+    logCaughtError(error);
+    process.exit(1);
+  }
 }

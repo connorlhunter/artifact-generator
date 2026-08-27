@@ -6,8 +6,8 @@ export const repoFixtureDocsRoot = "docs-fixture";
 export const repoFixtureEmptyRoot = "empty-fixture";
 export const repoFixtureProjectName = "artifact-generator";
 export const diagramsFixtureRoot = join(testResourcesRoot, "diagrams-fixture");
-export const missingPreviewPath = join(testResourcesRoot, "missing-preview.html");
-export const existingPreviewPath = join(testResourcesRoot, "existing-preview.html");
+export const missingArtifactPath = join(testResourcesRoot, "missing-artifact.json");
+export const existingArtifactPath = join(testResourcesRoot, "existing-artifact.json");
 
 export const markdownPaths = {
   rootReadme: "README.md",

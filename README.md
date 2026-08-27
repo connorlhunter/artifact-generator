@@ -10,7 +10,7 @@ Application repositories publish their own coverage. This repo publishes its own
 bun install
 brew install tectonic
 bun run artifacts:source:sync
-bun run docs:render:open -- artifact-generator
+bun run docs:build
 bun run verify
 ```
 
@@ -22,7 +22,7 @@ Local verification also requires CodeQL CLI 2.26.3 on `PATH`.
 
 1. Run `bun run artifacts:source:sync`.
 2. Edit files below `tmp/s3-inputs/`.
-3. Review docs or diagrams with the scoped render commands.
+3. Build the affected docs or render the affected diagrams locally.
 4. Run `bun run artifacts:source:publish` to save source changes to S3.
 5. Run `bun run verify`.
 6. Run `bun run artifacts:ship` to rebuild and publish the generated bundles.
@@ -60,7 +60,7 @@ Each documentation collection owns one strict `major.minor.patch` version and re
 
 Rendered document headers show the inherited update date; diagram stamps show both values. Diagram outputs use `<name>-v<major>.<minor>.<patch>-<YYYY-MM-DD>.svg`; the build resolves those filenames into docs links and the public project manifest. Update the collection metadata whenever the document release changes, and update a diagram's own metadata when that diagram changes.
 
-`content-manifest.json:lastUpdated` is reserved for the portfolio code footer. Artifact builds do not change or reuse it. Coverage has no artifact version; each project publisher creates one UTC publication timestamp and renders its HTML and PDF from that same value.
+`content-manifest.json:lastUpdated` is reserved for the portfolio code footer. Artifact builds do not change or reuse it. Coverage has no artifact version; each project publisher creates one UTC publication timestamp and writes JSON and PDF from that same value.
 
 ### Local Bundle
 
@@ -74,7 +74,7 @@ rsync -a /absolute/path/to/source-inputs/ tmp/local-source-bundles/review/
 Pass one explicit `local=<bundle>` argument to read the staged bundle without syncing S3 first:
 
 ```bash
-bun run docs:render:open -- artifact-generator local=review
+bun run docs:build -- local=review
 bun run diagrams:render -- connor-hunter local=review
 bun run resume:build -- local=review
 bun run artifacts:build -- local=review
@@ -88,8 +88,8 @@ Bundle names use lowercase letters, numbers, and hyphens. The selected tree must
 ## Outputs
 
 ```text
-dist/docs-preview/   Current docs HTML/PDF preview and copied viewer assets
-coverage/            Artifact Generator coverage HTML/PDF
+dist/docs-artifacts/ Markdown docs, navigation indexes, and direct PDFs
+coverage/            Artifact Generator coverage JSON/PDF
 dist/resume/         Generated resume PDF
 dist/site-artifacts/ CloudFront-ready docs, diagrams, content, and coverage
 dist/site-assets/    CloudFront-ready icons and generated resume
@@ -97,19 +97,28 @@ dist/site-assets/    CloudFront-ready icons and generated resume
 
 Project coverage folders are excluded from the generator bundle. Each application repo publishes its report directly to its manifest path.
 
+## Local Portfolio Preview
+
+Run the local artifact server while previewing the portfolio:
+
+```bash
+bun run artifacts:serve
+```
+
+It serves the assembled docs and diagrams plus fresh coverage and changelog files from each
+sibling project repository. It is local only and does not change the production publishing flow.
+
 ## Common Commands
 
 | Task                       | Command                                     |
 | -------------------------- | ------------------------------------------- |
 | Sync source inputs         | `bun run artifacts:source:sync`             |
 | Publish source inputs      | `bun run artifacts:source:publish`          |
-| Render and open docs       | `bun run docs:render:open -- <project>`     |
-| Render docs                | `bun run docs:render -- <project>`          |
-| Render docs PDF            | `bun run docs:render:pdf -- <project>`      |
+| Build docs                 | `bun run docs:build -- <project>`           |
 | Render diagrams            | `bun run diagrams:render -- <project>`      |
 | Render and open diagrams   | `bun run diagrams:render:open -- <project>` |
 | Generate coverage          | `bun run test:coverage`                     |
-| Open coverage              | `bun run coverage:open`                     |
+| Serve local portfolio data | `bun run artifacts:serve`                   |
 | Format files               | `bun run format`                            |
 | Check formatting and code  | `bun run check`                             |
 | Generate resume PDF        | `bun run resume:build`                      |
@@ -120,24 +129,22 @@ Project coverage folders are excluded from the generator bundle. Each applicatio
 | Build from a local bundle  | `bun run artifacts:build -- local=<bundle>` |
 | Run the full quality check | `bun run verify`                            |
 
-Docs and diagram commands require one project slug. Root pipeline docs are included with the `artifact-generator` preview.
+Docs and diagram commands require one project slug. Root pipeline docs are included with the `artifact-generator` collection.
 
 ```bash
-bun run docs:render:open -- cipher
+bun run docs:build -- cipher
 bun run diagrams:render -- connor-hunter
 ```
 
-`docs:render:pdf` rebuilds the selected preview before printing it, so it also works when `dist/docs-preview/` does not exist yet.
-
-Pass `--github owner/repo` to add source links to a docs preview.
+Each docs collection contains readable Markdown pages, a small `index.json` navigation file, and a direct PDF. Portfolio turns those Markdown pages into its native reader, including next and previous page links.
 
 ## Repository Shape
 
 ```text
 scripts/core/         shared filesystem, process, environment, logging, and paths
-scripts/docs/         Markdown discovery, HTML/PDF rendering, and preview behavior
+scripts/docs/         Markdown discovery and docs artifact compilation
 scripts/diagrams/     Mermaid validation, rendering, and openers
-scripts/coverage/     LCOV parsing and HTML/PDF reports
+scripts/coverage/     LCOV parsing and JSON/PDF reports
 scripts/dependencies/ dependency policy sync
 scripts/git-hooks/    local Git hook setup
 scripts/publish/      source sync and generated bundle publishing
@@ -145,11 +152,11 @@ scripts/resume/       selected LaTeX resume compilation
 test/                 tests arranged to mirror the script folders
 ```
 
-The project uses Bun for installs, scripts, and tests. TypeScript is compiled with `tsgo`. Generated docs PDFs use Puppeteer and honor `PUPPETEER_EXECUTABLE_PATH` when it is set. Resume builds read `artifacts/resume/Tectonic.toml` from the selected local or S3-backed source bundle and compile a staged copy with Tectonic.
+The project uses Bun for installs, scripts, and tests. TypeScript is compiled with `tsgo`. Docs, coverage, and changelog PDFs are written directly from their source data. Resume builds read `artifacts/resume/Tectonic.toml` from the selected local or S3-backed source bundle and compile a staged copy with Tectonic.
 
 ## Releases
 
-`package.json` is the Artifact Generator release-version source. Keep the first `CHANGELOG.md` heading aligned with it; `bun run version:check` enforces the pair in the normal verification gate.
+`package.json` is the Artifact Generator release-version source. Keep the first `CHANGELOG.md` heading aligned with it; `bun run version:check` enforces the pair in the normal verification gate. `bun run release:publish` publishes the generated bundle, including the canonical changelog Markdown and PDF.
 
 ## Change Naming
 
@@ -169,5 +176,5 @@ Dependency pins and temporary release-age exceptions live in `dependency-policy.
 
 ## Documentation
 
-- [Live Artifact Generator docs](https://connorhunter.me/projects/artifact-generator?viewer=docs#project-viewer)
+- [Live Artifact Generator docs](https://connorhunter.me/projects/artifact-generator/docs)
 - [Test layout](./test/README.md)

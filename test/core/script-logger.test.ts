@@ -39,7 +39,7 @@ describe("script logger", () => {
 
     logError("Missing file");
     logErrorHeading("Opening failed", 1);
-    logCommandHint("bun run docs:render -- artifact-generator");
+    logCommandHint("bun run docs:build -- artifact-generator");
     logFailureDetails(
       {
         error: new Error("spawn failed"),
@@ -52,7 +52,7 @@ describe("script logger", () => {
 
     expect(error).toHaveBeenCalledWith(expect.stringContaining("Missing file"));
     expect(error).toHaveBeenCalledWith(expect.stringContaining("Opening failed (1)"));
-    expect(error).toHaveBeenCalledWith("Run `bun run docs:render -- artifact-generator` first.");
+    expect(error).toHaveBeenCalledWith("Run `bun run docs:build -- artifact-generator` first.");
     expect(error).toHaveBeenCalledWith("- diagram.svg");
     expect(error).toHaveBeenCalledWith("  spawn failed");
     expect(error).toHaveBeenCalledWith("  stdout text");

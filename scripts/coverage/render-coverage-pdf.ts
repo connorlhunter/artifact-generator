@@ -1,48 +1,38 @@
-import { dirname } from "node:path";
-import { pathToFileURL } from "node:url";
-import puppeteer from "puppeteer";
-import { ensureDirectory } from "../core/bun-native-fs.ts";
-import { pdfBrowserLaunchOptions } from "../core/pdf-browser.ts";
+import { existsSync, readFileSync } from "node:fs";
 import { artifactPaths } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logError, logSuccess } from "../core/script-logger.ts";
+import { writePdf } from "../pdf/write-pdf.ts";
+import type { CoverageArtifact, CoverageMetric } from "./render-coverage-report.ts";
 
-/**
- * Renders the standalone coverage report as a downloadable PDF.
- *
- * @param input - HTML coverage report to render.
- * @param output - PDF file written beside the coverage report.
- * @returns The generated PDF path.
- */
+function metricLabel(metric: CoverageMetric): string {
+  const percentage = metric.found === 0 ? 100 : (metric.covered / metric.found) * 100;
+  return `${percentage.toFixed(2)}% (${metric.covered}/${metric.found})`;
+}
+
+/** Renders the structured coverage artifact as a direct PDF download. */
 export async function renderCoveragePdf(
   input = artifactPaths.coverageReport,
   output = artifactPaths.coverageReportPdf,
 ): Promise<string> {
-  ensureDirectory(dirname(output));
+  if (!existsSync(input)) throw new Error(`Missing coverage artifact: ${input}.`);
 
-  const browser = await puppeteer.launch(pdfBrowserLaunchOptions(process.env.CI === "true"));
-
-  try {
-    const page = await browser.newPage();
-
-    await page.emulateMediaType("print");
-    await page.goto(pathToFileURL(input).href, { waitUntil: "networkidle0" });
-    await page.pdf({
-      format: "Letter",
-      landscape: true,
-      margin: {
-        bottom: "0.45in",
-        left: "0.45in",
-        right: "0.45in",
-        top: "0.45in",
-      },
-      path: output,
-      printBackground: true,
-    });
-  } finally {
-    await browser.close();
-  }
-
+  const coverage = JSON.parse(readFileSync(input, "utf8")) as CoverageArtifact;
+  await writePdf({
+    output,
+    sections: coverage.surfaces.map((surface) => ({
+      body: [
+        `All files: lines ${metricLabel(surface.totals.lines)}, functions ${metricLabel(surface.totals.functions)}, branches ${metricLabel(surface.totals.branches)}`,
+        ...surface.files.map(
+          (file) =>
+            `${file.path}: lines ${metricLabel(file.lines)}, functions ${metricLabel(file.functions)}, branches ${metricLabel(file.branches)}`,
+        ),
+      ],
+      heading: surface.label,
+    })),
+    subtitle: `Updated ${coverage.updatedAt}. Required minimum: ${coverage.minimumCoverage.lines}% lines and ${coverage.minimumCoverage.functions}% functions.`,
+    title: "Artifact Generator Coverage",
+  });
   logSuccess(`Rendered coverage PDF: ${output}`);
 
   return output;

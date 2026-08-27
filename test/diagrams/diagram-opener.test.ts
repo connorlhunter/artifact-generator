@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { missingPreviewPath, renderedDiagramPaths } from "../resources/docs.constants.ts";
+import { missingArtifactPath, renderedDiagramPaths } from "../resources/docs.constants.ts";
 import { diagramJobs } from "../resources/docs.mock.ts";
 
 const openDefaultFile = mock<(file: string) => Promise<string>>();
@@ -49,7 +49,7 @@ describe("diagram opener", () => {
       throw new Error("exit");
     }) as never);
 
-    await expect(openRenderedDiagrams([missingPreviewPath])).rejects.toThrow("exit");
+    await expect(openRenderedDiagrams([missingArtifactPath])).rejects.toThrow("exit");
   });
 
   test("logs opener failures before exiting", async () => {

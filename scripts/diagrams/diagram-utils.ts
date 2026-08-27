@@ -1,7 +1,6 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import path from "node:path";
-import { tmpdir } from "node:os";
 import { repoDirs, sharedDiagramInputs, sourceInputDirs } from "../core/script-constants.ts";
 import { diagramOutputPath, readDiagramMetadata } from "./diagram-metadata.ts";
 import type { DiagramJob } from "./diagram-types.ts";
@@ -19,6 +18,7 @@ const logicalDiagramRoot = repoDirs.diagrams;
 const ignoredDirs = new Set([".git", repoDirs.nodeModules]);
 
 const overviewDiagramSuffix = "-overview.mmd";
+const validationOutputDir = join(repoDirs.dist, ".diagram-validation");
 
 /**
  * Returns true when a path exists and is a directory.
@@ -147,7 +147,7 @@ function isAllDiagramRoot(root: string): boolean {
  * Reads required project paths from command-line args.
  *
  * Example:
- * `bun run diagrams:render -- cipher-ledger`
+ * `bun run diagrams:render -- cipher-trace`
  *
  * @param {string[]} args - CLI args after the script name.
  * @returns {string[]} Project paths to scan.
@@ -333,14 +333,15 @@ export function findDiagrams(roots: string[] = []): DiagramJob[] {
 }
 
 /**
- * Maps a normal output path to a temp output used by validation.
+ * Maps a normal output path to a controlled build output used by validation.
  *
  * @param {string} output - Normal SVG output path.
- * @returns {string} Temp path that avoids writing generated SVGs to the docs tree.
+ * @returns {string} Build path that avoids writing generated SVGs to the docs tree.
  */
 export function validateOutputPath(output: string): string {
   const normalized = relative(".", output).replaceAll("/", "-").replaceAll("\\", "-");
-  return join(tmpdir(), normalized);
+  mkdirSync(validationOutputDir, { recursive: true });
+  return join(validationOutputDir, normalized);
 }
 
 /**
@@ -359,7 +360,7 @@ export function outputDirs(diagrams: DiagramJob[]): string[] {
  * Produces a short identifier using the top-level project and filename
  * without extension.
  * Example:
- * - "diagrams/cipher-ledger/foo.mmd" -> "foo"
+ * - "diagrams/cipher-trace/foo.mmd" -> "foo"
  *
  * @param {string} p - File system path.
  * @returns {string} Compact name for logging.
@@ -376,7 +377,7 @@ export function compactName(p: string): string {
  *
  * Uses the second segment for root diagram project folders.
  * Example:
- * - "diagrams/cipher-ledger/..." -> "cipher-ledger"
+ * - "diagrams/cipher-trace/..." -> "cipher-trace"
  *
  * @param {string} p - File system path.
  * @returns {string} Project name.

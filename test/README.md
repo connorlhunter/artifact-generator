@@ -1,20 +1,20 @@
 # Test Overview
 
-The test suite covers the repository-owned TypeScript scripts for docs previews, Mermaid diagram workflows, file opening, process execution, and script entrypoint detection. It does not contain tests for external application repositories.
+The test suite covers the repository-owned TypeScript scripts for structured docs artifacts, Mermaid diagram workflows, file opening, process execution, and script entrypoint detection. It does not contain tests for external application repositories.
 
 ## Structure
 
 - `core/*.test.ts`: tests for shared filesystem, process, logging, constants, and opener helpers.
-- `docs/*.test.ts`: tests for Markdown discovery, docs preview rendering, and docs preview openers.
+- `docs/*.test.ts`: tests for Markdown discovery and structured docs artifact compilation.
 - `diagrams/*.test.ts`: tests for Mermaid discovery, validation, rendering, and openers.
-- `coverage/*.test.ts`: tests for this repository's local coverage renderer and opener.
+- `coverage/*.test.ts`: tests for this repository's JSON and PDF coverage artifacts.
 - `dependencies/*.test.ts`: tests for dependency policy syncing.
 - `git-hooks/*.test.ts`: tests for committed hook path setup.
 - `publish/*.test.ts`: tests for CloudFront-ready artifact bundle assembly and S3 publish configuration.
 - `resume/*.test.ts`: tests for selected Tectonic source staging, command execution, and generated PDF validation.
 - `resources/docs.constants.ts`: shared fixture paths and command fixtures.
 - `resources/docs.mock.ts`: typed mock records used by multiple tests.
-- `resources/repo-fixture/`: small repository tree for docs preview tests.
+- `resources/repo-fixture/`: small repository tree for docs artifact tests.
 - `resources/diagrams-fixture/`: small Mermaid tree for diagram discovery tests.
 
 The test folder mirrors script ownership:
@@ -45,7 +45,7 @@ All tests run on Bun's native isolated test runner:
 
 ```text
 bun run test          -> build, then bun test --isolate
-bun run test:coverage -> build, bun coverage, and HTML coverage rendering
+bun run test:coverage -> build, Bun coverage, and JSON/PDF artifact rendering
 ```
 
 Pass a test path after `--` when running a focused test:

@@ -1,11 +1,11 @@
-import { readFileSync, rmSync } from "node:fs";
-import { dirname } from "node:path";
+import { readFileSync } from "node:fs";
 import { renderCoveragePdf } from "../coverage/render-coverage-pdf.ts";
 import { renderCoverageReport } from "../coverage/render-coverage-report.ts";
+import { buildChangelogArtifact } from "../changelog/changelog-artifact.ts";
+import { buildSiteContentArtifact } from "../content/build-site-content.ts";
 import { renderDiagrams } from "../diagrams/render-diagrams.ts";
-import { publicDocsUrl, renderDocsPdf } from "../docs/render-docs-pdf.ts";
-import { renderDocsPreview } from "../docs/render-docs-preview.ts";
-import { artifactPaths, sourceInputDirs } from "../core/script-constants.ts";
+import { buildDocsArtifact } from "../docs/document-artifact.ts";
+import { sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logError, logHeading, logItem, logSuccess } from "../core/script-logger.ts";
 import { buildResume } from "../resume/build-resume.ts";
@@ -15,7 +15,7 @@ import {
 } from "../core/source-input-selection.ts";
 import {
   cleanPublishOutputs,
-  copyDocsPreview,
+  copyDocsArtifact,
   copyRenderedDiagrams,
   copySharedPublishInputs,
   publishOutputs,
@@ -48,11 +48,11 @@ export function projectSlugsFromManifest(manifestPath = projectManifestPath): st
 /**
  * Renders project docs and diagrams, then assembles CloudFront-ready bundles.
  *
- * @param docsArgs - Extra docs render args such as GitHub source-link options.
+ * @param docsArgs - Source selection arguments preserved for the CLI contract.
  */
 export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void> {
   validateSourceInputSelection();
-  const commandArgs = sourceInputCommandArgs(docsArgs);
+  sourceInputCommandArgs(docsArgs);
   const projectSlugs = projectSlugsFromManifest();
 
   if (projectSlugs.length === 0) {
@@ -64,15 +64,15 @@ export async function buildSiteArtifacts(docsArgs: string[] = []): Promise<void>
 
   await renderCoverageReport();
   await renderCoveragePdf();
+  await buildChangelogArtifact();
+  buildSiteContentArtifact();
   await buildResume();
   await renderDiagrams(projectSlugs);
 
   for (const slug of projectSlugs) {
-    logItem(`Rendering docs preview for ${slug}`, 1);
-    rmSync(dirname(artifactPaths.docsPreview), { force: true, recursive: true });
-    await renderDocsPreview([slug, ...commandArgs]);
-    await renderDocsPdf(undefined, undefined, publicDocsUrl(slug));
-    copyDocsPreview(slug);
+    logItem(`Compiling docs for ${slug}`, 1);
+    await buildDocsArtifact(slug);
+    copyDocsArtifact(slug);
   }
 
   const diagramCount = copyRenderedDiagrams();
