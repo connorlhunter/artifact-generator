@@ -1,0 +1,28 @@
+{
+  "ignorePatterns": [
+    "coverage/**",
+    "dist/**",
+    "node_modules/**",
+    "tmp/**",
+    "_work/**",
+    "**/*.svg",
+    "bun.lock"
+  ],
+  "rules": {
+    "no-control-regex": "off"
+  },
+  "overrides": [
+    {
+      "files": ["scripts/**/*.ts"],
+      "rules": {
+        "complexity": ["error", { "max": 15, "variant": "classic" }]
+      }
+    },
+    {
+      "files": ["scripts/docs/preview/browser/**/*.ts"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    }
+  ]
+}

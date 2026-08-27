@@ -1,11 +1,3 @@
-[pins."brace-expansion"]
-version = "5.0.9"
-reason = "Fix high-severity expansion DoS vulnerabilities pulled through ESLint and typescript-eslint minimatch chains."
-
-[pins."js-yaml"]
-version = "4.3.1"
-reason = "Fix high-severity YAML merge-key CPU exhaustion pulled through Puppeteer cosmiconfig."
-
 [pins.nanoid]
 version = "3.3.18"
 reason = "Fix a high-severity infinite-loop vulnerability pulled through PostCSS."
@@ -17,10 +9,6 @@ reason = "Fix high-severity source-map path traversal pulled through Mermaid Zen
 [pins."string-width"]
 version = "4.2.3"
 reason = "Keep Mermaid CLI Puppeteer yargs on a CommonJS-compatible string-width version so diagram rendering works on Node."
-
-[pins."tar-fs"]
-version = "2.1.4"
-reason = "Fix high-severity vulnerabilities pulled through the Mermaid CLI Puppeteer dependency chain."
 
 [pins.ws]
 version = "8.21.0"

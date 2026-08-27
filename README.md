@@ -110,6 +110,8 @@ Project coverage folders are excluded from the generator bundle. Each applicatio
 | Render and open diagrams   | `bun run diagrams:render:open -- <project>` |
 | Generate coverage          | `bun run test:coverage`                     |
 | Open coverage              | `bun run coverage:open`                     |
+| Format files               | `bun run format`                            |
+| Check formatting and code  | `bun run check`                             |
 | Generate resume PDF        | `bun run resume:build`                      |
 | Run the local CodeQL scan  | `bun run codeql:scan`                       |
 | Build publish bundles      | `bun run artifacts:build`                   |
@@ -159,7 +161,7 @@ The project uses Bun for installs, scripts, and tests. TypeScript is compiled wi
 
 ## Quality Checks
 
-`bun run verify` runs the dependency audit, formatting check, lint, typecheck, test suite, and local CodeQL security scan. The committed pre-commit and pre-push hooks run the same command. GitHub Actions defers this local scan to the repository's hosted CodeQL checks.
+`bun run verify` runs the dependency audit, Oxfmt formatting check, Oxlint check, TypeScript typecheck, test suite, and local CodeQL security scan. Oxlint limits production scripts to 15 classic complexity paths. The committed pre-commit and pre-push hooks run the same command. GitHub Actions defers this local scan to the repository's hosted CodeQL checks.
 
 The local scan covers JavaScript, TypeScript, and GitHub Actions with the security-extended suites. Its checked-in baseline is empty; any finding fails verification.
 

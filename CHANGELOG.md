@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.3 - 2026-08-26
+
+### Changed
+
+- Replaced Prettier and ESLint with Oxfmt and Oxlint.
+- Added a 15-path complexity limit for production scripts and simplified the CodeQL SARIF parser.
+- Kept the unified check in local hooks and GitHub Actions.
+
 ## 1.7.2 - 2026-08-21
 
 ### Changed
