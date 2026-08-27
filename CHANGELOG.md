@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.6 - 2026-08-27
+
+### Fixed
+
+- Preserve changelog artifacts published by each owning project during site bundle syncs.
+
 ## 1.7.5 - 2026-08-27
 
 ### Fixed
