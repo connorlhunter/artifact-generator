@@ -52,6 +52,18 @@ export interface CodeqlScanOptions {
   readonly env?: NodeJS.ProcessEnv;
 }
 
+interface SarifResult {
+  locations?: Array<{
+    physicalLocation?: {
+      artifactLocation?: { uri?: unknown };
+      region?: { startLine?: unknown };
+    };
+  }>;
+  message?: { text?: unknown };
+  partialFingerprints?: Record<string, unknown>;
+  ruleId?: unknown;
+}
+
 /** Reads a CodeQL CLI version response. */
 export function parseCodeqlVersion(contents: string): string {
   const parsed = JSON.parse(contents) as { version?: unknown };
@@ -70,48 +82,38 @@ export function assertCodeqlVersion(actual: string, expected: string): void {
 export function parseSarif(contents: string, language: string): CodeqlFinding[] {
   const sarif = JSON.parse(contents) as {
     runs?: Array<{
-      results?: Array<{
-        locations?: Array<{
-          physicalLocation?: {
-            artifactLocation?: { uri?: unknown };
-            region?: { startLine?: unknown };
-          };
-        }>;
-        message?: { text?: unknown };
-        partialFingerprints?: Record<string, unknown>;
-        ruleId?: unknown;
-      }>;
+      results?: SarifResult[];
     }>;
   };
 
-  const findings: CodeqlFinding[] = [];
-  for (const run of sarif.runs ?? []) {
-    for (const result of run.results ?? []) {
-      const location = result.locations?.[0]?.physicalLocation;
-      const path = location?.artifactLocation?.uri;
-      const startLine = location?.region?.startLine;
-      const message = result.message?.text;
-      if (
-        typeof result.ruleId !== "string" ||
-        typeof path !== "string" ||
-        typeof startLine !== "number" ||
-        typeof message !== "string"
-      ) {
-        throw new Error("CodeQL SARIF contains an incomplete result.");
-      }
+  return (sarif.runs ?? [])
+    .flatMap((run) => run.results ?? [])
+    .map((result) => parseSarifResult(result, language))
+    .sort(compareFinding);
+}
 
-      findings.push({
-        fingerprint: selectStableFingerprint(result.partialFingerprints),
-        language,
-        message,
-        path: decodeURIComponent(path.replace(/^file:\/\//u, "")),
-        ruleId: result.ruleId,
-        startLine,
-      });
-    }
+function parseSarifResult(result: SarifResult, language: string): CodeqlFinding {
+  const location = result.locations?.[0]?.physicalLocation;
+  const path = location?.artifactLocation?.uri;
+  const startLine = location?.region?.startLine;
+  const message = result.message?.text;
+  if (
+    typeof result.ruleId !== "string" ||
+    typeof path !== "string" ||
+    typeof startLine !== "number" ||
+    typeof message !== "string"
+  ) {
+    throw new Error("CodeQL SARIF contains an incomplete result.");
   }
 
-  return findings.sort(compareFinding);
+  return {
+    fingerprint: selectStableFingerprint(result.partialFingerprints),
+    language,
+    message,
+    path: decodeURIComponent(path.replace(/^file:\/\//u, "")),
+    ruleId: result.ruleId,
+    startLine,
+  };
 }
 
 /** Parses and validates the committed CodeQL baseline. */

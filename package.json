@@ -1,6 +1,6 @@
 {
   "name": "artifact-generator",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.14",
@@ -21,12 +21,13 @@
     "deps:policy:check": "bun scripts/dependencies/sync-dependency-policy.ts --check",
     "build": "bun scripts/core/clean-dist.ts && bun x tsgo -p tsconfig.json",
     "typecheck": "bun x tsgo --noEmit -p tsconfig.json",
+    "check": "bun run format:check && bun run lint && bun run typecheck",
     "version:check": "bun scripts/release/check-release-version.ts",
     "naming:branch": "bun scripts/changes/validate-change-name.ts branch",
     "naming:pr": "bun scripts/changes/validate-change-name.ts pr-title",
-    "format": "bun x prettier --write . --ignore-unknown",
-    "format:check": "bun x prettier --check . --ignore-unknown",
-    "lint": "bun x eslint .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
     "test": "bun run build && bun test --isolate --timeout 30000",
     "test:coverage": "bun run build && bun scripts/coverage/clean-coverage.ts && bun test --isolate --coverage --timeout 30000 && bun scripts/coverage/render-coverage-report.ts && bun scripts/coverage/render-coverage-pdf.ts",
     "coverage:open": "bun run test:coverage && bun dist/scripts/coverage/open-coverage-report.js",
@@ -41,44 +42,23 @@
     "diagrams:render:open": "bun run build && bun dist/scripts/diagrams/render-open-diagrams.js",
     "resume:build": "bun scripts/resume/build-resume.ts",
     "prepare": "bun scripts/git-hooks/setup-git-hooks.ts",
-    "verify": "bun run naming:branch && bun run version:check && bun run audit && bun run format:check && bun run lint && bun run typecheck && bun run test && bun run codeql:scan"
-  },
-  "lint-staged": {
-    "*.{js,ts}": [
-      "bun x prettier --write",
-      "bun x eslint --fix"
-    ],
-    "*.md": [
-      "bun x prettier --write",
-      "bun x eslint --fix"
-    ],
-    "*.{json,html}": [
-      "bun x prettier --write"
-    ]
+    "verify": "bun run naming:branch && bun run version:check && bun run audit && bun run check && bun run test && bun run codeql:scan"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@eslint/markdown": "^8.0.3",
     "@mermaid-js/mermaid-cli": "^11.16.0",
     "@types/bun": "^1.3.14",
     "@types/node": "^26.2.0",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
-    "eslint": "^10.8.1",
-    "eslint-config-prettier": "^10.1.8",
-    "lint-staged": "^17.3.0",
     "marked": "^18.0.9",
-    "prettier": "^3.9.6",
+    "oxfmt": "0.62.0",
+    "oxlint": "1.77.0",
     "puppeteer": "^25.3.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.67.0"
+    "typescript": "^6.0.3"
   },
   "overrides": {
-    "brace-expansion": "5.0.9",
-    "js-yaml": "4.3.1",
     "nanoid": "3.3.18",
     "postcss": "8.5.23",
     "string-width": "4.2.3",
-    "tar-fs": "2.1.4",
     "ws": "8.21.0"
   }
 }

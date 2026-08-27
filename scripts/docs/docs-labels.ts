@@ -19,7 +19,6 @@ const docsLabelOverrides = new Map([
   ["oac", "OAC"],
   ["oidc", "OIDC"],
   ["pdf", "PDF"],
-  ["prettier", "Prettier"],
   ["readme", "README"],
   ["rust", "Rust"],
   ["s3", "S3"],
