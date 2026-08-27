@@ -32,19 +32,42 @@ export const publishOutputs = {
   siteAssets: join(repoDirs.dist, "site-assets"),
 } as const;
 
-interface ProjectArtifactManifestEntry {
-  diagrams?: Array<{
-    id?: string;
-    lastUpdated?: string;
-    overview?: boolean;
-    svgPath: string;
-    title?: string;
-    version?: string;
-  }>;
+interface ProjectArtifactManifestSourceEntry {
+  readonly coverageComingSoon?: boolean;
+  readonly diagramPaths?: readonly string[];
+  readonly iconPath: string;
+  readonly overviewDiagramPath?: string;
 }
 
-interface ProjectArtifactManifest {
-  projects: Record<string, ProjectArtifactManifestEntry>;
+interface ProjectArtifactManifestSource {
+  readonly projects: Record<string, ProjectArtifactManifestSourceEntry>;
+}
+
+interface PublishedDiagram {
+  readonly id: string;
+  readonly lastUpdated: string;
+  readonly overview?: boolean;
+  readonly svgPath: string;
+  readonly title: string;
+  readonly version: string;
+}
+
+interface PublishedProjectArtifactManifest {
+  readonly projects: Record<
+    string,
+    {
+      readonly changelog: { readonly markdownPath: string; readonly pdfPath: string };
+      readonly coverage: {
+        readonly comingSoon?: boolean;
+        readonly indexPath: string;
+        readonly pdfPath: string;
+      };
+      readonly diagrams: readonly PublishedDiagram[];
+      readonly docs: { readonly indexPath: string; readonly pdfPath: string };
+      readonly iconPath: string;
+    }
+  >;
+  readonly schemaVersion: 2;
 }
 
 const defaultDocsProject = "artifact-generator";
@@ -169,26 +192,22 @@ export function copyDocsArtifact(project = defaultDocsProject): void {
 }
 
 /**
- * Adds generated PDF paths to the manifest copied into the public artifact bundle.
+ * Compiles the source project manifest into the small artifact contract consumed
+ * by the Portfolio. Source-only HTML paths remain private to artifact generation.
  *
  * @param manifestPath - Published project artifact manifest to update.
  */
-/**
- * Replaces legacy diagram output paths in the published manifest with the
- * versioned SVG names generated from each Mermaid source declaration.
- *
- * @param manifestPath - Published project artifact manifest to update.
- */
-export function addVersionedDiagramPaths(
+export function compileProjectArtifactManifest(
   manifestPath = join(publishOutputs.siteArtifacts, "manifests", "project-artifacts.json"),
 ): void {
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifest;
-
-  for (const project of Object.values(manifest.projects)) {
-    if (project.diagrams) {
-      project.diagrams = project.diagrams.map(versionedPublishedDiagram);
-    }
-  }
+  const source = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifestSource;
+  const projects = Object.fromEntries(
+    Object.entries(source.projects).map(([slug, project]) => [
+      slug,
+      publishedProjectArtifact(slug, project),
+    ]),
+  );
+  const manifest: PublishedProjectArtifactManifest = { projects, schemaVersion: 2 };
 
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
@@ -225,12 +244,10 @@ function versionedPublishedDiagramPath(diagramPath: string): string {
   return `${prefix}${outputRelativePath}`;
 }
 
-/** Adds stable display metadata while resolving one Mermaid source to its public SVG. */
-function versionedPublishedDiagram(
-  diagram: NonNullable<ProjectArtifactManifestEntry["diagrams"]>[number],
-): NonNullable<ProjectArtifactManifestEntry["diagrams"]>[number] {
+/** Compiles one source diagram path into stable Portfolio display metadata. */
+function publishedDiagram(svgPath: string, overview: boolean): PublishedDiagram {
   const prefix = `${repoDirs.diagrams}/`;
-  const sourceRelativePath = diagramSourcePath(diagram.svgPath.slice(prefix.length));
+  const sourceRelativePath = diagramSourcePath(svgPath.slice(prefix.length));
   const sourcePath = join(sourceInputDirs.diagrams, sourceRelativePath);
   const metadata = readDiagramMetadata(sourcePath);
   const sourceName = basename(sourceRelativePath, ".mmd");
@@ -240,12 +257,45 @@ function versionedPublishedDiagram(
     : sourceName;
 
   return {
-    ...diagram,
-    id: diagram.id ?? compactName.replace(/[^a-z0-9]+/giu, "-").replace(/^-+|-+$/gu, ""),
+    id: compactName.replace(/[^a-z0-9]+/giu, "-").replace(/^-+|-+$/gu, ""),
     lastUpdated: metadata.lastUpdated,
-    svgPath: versionedPublishedDiagramPath(diagram.svgPath),
-    title: diagram.title ?? formatDocLabel(compactName),
+    ...(overview ? { overview: true } : {}),
+    svgPath: versionedPublishedDiagramPath(svgPath),
+    title: formatDocLabel(compactName),
     version: metadata.version,
+  };
+}
+
+/** Compiles one project entry without exposing retired browser-viewer paths. */
+function publishedProjectArtifact(
+  slug: string,
+  source: ProjectArtifactManifestSourceEntry,
+): PublishedProjectArtifactManifest["projects"][string] {
+  const projectDiagramPrefix = `${repoDirs.diagrams}/${slug}/`;
+  const diagrams = (source.diagramPaths ?? [])
+    .filter((path) => path.startsWith(projectDiagramPrefix))
+    .map((path) => publishedDiagram(path, path === source.overviewDiagramPath));
+
+  if (diagrams.length === 0) {
+    throw new Error(`Project manifest requires at least one diagram for ${slug}`);
+  }
+
+  return {
+    changelog: {
+      markdownPath: `projects/${slug}/changelog/CHANGELOG.md`,
+      pdfPath: `projects/${slug}/changelog/changelog.pdf`,
+    },
+    coverage: {
+      ...(source.coverageComingSoon === undefined ? {} : { comingSoon: source.coverageComingSoon }),
+      indexPath: `projects/${slug}/coverage/index.json`,
+      pdfPath: `projects/${slug}/coverage/coverage.pdf`,
+    },
+    diagrams,
+    docs: {
+      indexPath: `docs/${slug}/index.json`,
+      pdfPath: `docs/${slug}/docs.pdf`,
+    },
+    iconPath: source.iconPath,
   };
 }
 
@@ -324,7 +374,7 @@ export function copySharedPublishInputs(): void {
     copyPath(plan);
   }
 
-  addVersionedDiagramPaths();
+  compileProjectArtifactManifest();
   sanitizeContentManifest();
 }
 
