@@ -10,6 +10,7 @@
 ### Fixed
 
 - Restore the 95% line and function coverage gate with native artifact tests.
+- Publish the content manifest contract required to load Portfolio content.
 
 ## 1.7.3 - 2026-08-26
 
