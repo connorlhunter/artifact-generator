@@ -194,11 +194,13 @@ export function addVersionedDiagramPaths(
 }
 
 /** Removes source-only frontmatter paths from the public content manifest. */
-function sanitizeContentManifest(
+export function sanitizeContentManifest(
   manifestPath = join(publishOutputs.siteArtifacts, "manifests", "content-manifest.json"),
 ): void {
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
   delete manifest.profile;
+  manifest.schemaVersion = 2;
+  manifest.siteContentPath = "content/site.json";
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
