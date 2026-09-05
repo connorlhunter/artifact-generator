@@ -8,6 +8,9 @@ The test suite covers the repository-owned TypeScript scripts for structured doc
 - `docs/*.test.ts`: tests for Markdown discovery and structured docs artifact compilation.
 - `diagrams/*.test.ts`: tests for Mermaid discovery, validation, rendering, and openers.
 - `coverage/*.test.ts`: tests for this repository's JSON and PDF coverage artifacts.
+- `artifacts/*.test.ts`: tests for native resource contracts and compiled portfolio content.
+- `changelog/*.test.ts`: tests for changelog Markdown/PDF publication.
+- `local/*.test.ts`: tests for local artifact serving and sibling report overlays.
 - `dependencies/*.test.ts`: tests for dependency policy syncing.
 - `git-hooks/*.test.ts`: tests for committed hook path setup.
 - `publish/*.test.ts`: tests for CloudFront-ready artifact bundle assembly and S3 publish configuration.
@@ -17,25 +20,12 @@ The test suite covers the repository-owned TypeScript scripts for structured doc
 - `resources/repo-fixture/`: small repository tree for docs artifact tests.
 - `resources/diagrams-fixture/`: small Mermaid tree for diagram discovery tests.
 
-The test folder mirrors script ownership:
-
-```text
-scripts/core/         -> test/core/
-scripts/docs/         -> test/docs/
-scripts/diagrams/     -> test/diagrams/
-scripts/coverage/     -> test/coverage/
-scripts/dependencies/ -> test/dependencies/
-scripts/git-hooks/    -> test/git-hooks/
-scripts/publish/      -> test/publish/
-scripts/resume/       -> test/resume/
-```
-
 ## Conventions
 
 - Keep fixtures under `test/resources/`.
 - Prefer shared fixtures over hardcoded paths inside tests.
 - Mock process boundaries such as browser openers, Mermaid CLI calls, and child-process execution.
-- Keep this repository's script coverage above the global Bun LCOV gates used by the coverage check script.
+- Keep aggregate line and function coverage at or above 95%; the JSON report renderer enforces those thresholds.
 - Keep application tests in the application repositories that own that source code.
 - Use `bun run typecheck` for the default tsgo typecheck path.
 
@@ -48,10 +38,11 @@ bun run test          -> build, then bun test --isolate
 bun run test:coverage -> build, Bun coverage, and JSON/PDF artifact rendering
 ```
 
-Pass a test path after `--` when running a focused test:
+For a focused test, build once and invoke the test runner directly:
 
 ```bash
-bun run test -- test/docs/docs-utils.test.ts
+bun run build
+bun test --isolate --timeout 30000 test/docs/docs-utils.test.ts
 ```
 
 Tests import from `bun:test`:
