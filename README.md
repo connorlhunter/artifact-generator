@@ -2,32 +2,39 @@
 
 Builds and publishes the docs, diagrams, metadata, icons, generated resume, and Artifact Generator coverage used by the portfolio.
 
-Application repositories publish their own coverage. This repo publishes its own coverage and the shared artifact bundles. Artifact Generator requires at least 95% line and function coverage.
+Application repositories publish their own coverage and changelogs. This repo publishes its own reports and the shared artifact bundles. Artifact Generator requires at least 95% line and function coverage when building coverage artifacts.
 
 ## Start Here
 
 ```bash
 bun install
 brew install tectonic
+cp .env.example .env
+```
+
+Configure the source buckets and AWS credentials before syncing. Use the Bun and CodeQL versions declared in `package.json`; source transfers also require the AWS CLI.
+
+```bash
 bun run artifacts:source:sync
 bun run docs:build
-bun run verify
 ```
 
 `artifacts:source:sync` copies the private S3 source inputs into the ignored `tmp/s3-inputs/` folder. Renderers and publish commands use that local copy.
 
-Local verification also requires CodeQL CLI 2.26.3 on `PATH`.
+`bun run verify` checks the repository code. It clears `dist/` during its build, so run it before producing the final docs or publication bundle.
 
 ## Edit And Publish
 
 1. Run `bun run artifacts:source:sync`.
 2. Edit files below `tmp/s3-inputs/`.
 3. Build the affected docs or render the affected diagrams locally.
-4. Run `bun run artifacts:source:publish` to save source changes to S3.
-5. Run `bun run verify`.
+4. Run `bun run verify`.
+5. Run `bun run artifacts:source:publish` to save the reviewed source changes to S3.
 6. Run `bun run artifacts:ship` to rebuild and publish the generated bundles.
 
 `artifacts:ship` does not publish editable source inputs. Run `artifacts:source:publish` first when docs, diagrams, metadata, resume source, or icons change. The selected resume source is staged under `dist/` and compiled during the artifact build.
+
+Source publication replaces all seven configured input folders with S3 sync and `--delete`. Generated publication also uses `--delete`, while preserving other projects' coverage and changelogs. Publish complete bundles at those roots. A docs-only update can use scoped source-file uploads and complete `docs/<project>/` collections; see the [deployment documentation](https://connorhunter.me/projects/artifact-generator/docs).
 
 ## Source Inputs
 
@@ -45,7 +52,7 @@ The default source root is `tmp/s3-inputs/`. The source buckets and publish dest
 
 ### Versioned docs and diagrams
 
-Each documentation collection owns one strict `major.minor.patch` version and real ISO calendar date in `docs/<project>/document-metadata.json`. Markdown pages inherit those values, show the shared update date on every rendered page, and do not repeat a version label. Mermaid diagrams continue to own their own metadata comments:
+Project docs inherit a strict `major.minor.patch` version and real ISO calendar date from `docs/<project>/document-metadata.json`. Shared root pipeline pages use `docs/document-metadata.json` and join the Artifact Generator collection when built. Keep both metadata files aligned when releasing that collection. Rendered pages show the update date without repeating a version label. Mermaid diagrams continue to own their own metadata comments:
 
 ```json
 {
@@ -95,7 +102,7 @@ dist/site-artifacts/ CloudFront-ready docs, diagrams, content, and coverage
 dist/site-assets/    CloudFront-ready icons and generated resume
 ```
 
-Project coverage folders are excluded from the generator bundle. Each application repo publishes its report directly to its manifest path.
+Other projects' coverage and changelog folders are excluded from uploads and deletions. Each application repo publishes those reports directly to its manifest paths.
 
 ## Local Portfolio Preview
 
@@ -110,29 +117,30 @@ sibling project repository. It is local only and does not change the production 
 
 ## Common Commands
 
-| Task                       | Command                                     |
-| -------------------------- | ------------------------------------------- |
-| Sync source inputs         | `bun run artifacts:source:sync`             |
-| Publish source inputs      | `bun run artifacts:source:publish`          |
-| Build docs                 | `bun run docs:build -- <project>`           |
-| Render diagrams            | `bun run diagrams:render -- <project>`      |
-| Render and open diagrams   | `bun run diagrams:render:open -- <project>` |
-| Generate coverage          | `bun run test:coverage`                     |
-| Serve local portfolio data | `bun run artifacts:serve`                   |
-| Format files               | `bun run format`                            |
-| Check formatting and code  | `bun run check`                             |
-| Generate resume PDF        | `bun run resume:build`                      |
-| Run the local CodeQL scan  | `bun run codeql:scan`                       |
-| Build publish bundles      | `bun run artifacts:build`                   |
-| Publish generated bundles  | `bun run artifacts:publish`                 |
-| Build and publish bundles  | `bun run artifacts:ship`                    |
-| Build from a local bundle  | `bun run artifacts:build -- local=<bundle>` |
-| Run the full quality check | `bun run verify`                            |
+| Task                       | Command                                           |
+| -------------------------- | ------------------------------------------------- |
+| Sync source inputs         | `bun run artifacts:source:sync`                   |
+| Publish source inputs      | `bun run artifacts:source:publish`                |
+| Build generator docs       | `bun run docs:build`                              |
+| Build another collection   | `bun scripts/docs/document-artifact.ts <project>` |
+| Render diagrams            | `bun run diagrams:render -- <project>`            |
+| Render and open diagrams   | `bun run diagrams:render:open -- <project>`       |
+| Generate coverage          | `bun run test:coverage`                           |
+| Serve local portfolio data | `bun run artifacts:serve`                         |
+| Format files               | `bun run format`                                  |
+| Check formatting and code  | `bun run check`                                   |
+| Generate resume PDF        | `bun run resume:build`                            |
+| Run the local CodeQL scan  | `bun run codeql:scan`                             |
+| Build publish bundles      | `bun run artifacts:build`                         |
+| Publish generated bundles  | `bun run artifacts:publish`                       |
+| Build and publish bundles  | `bun run artifacts:ship`                          |
+| Build from a local bundle  | `bun run artifacts:build -- local=<bundle>`       |
+| Run the full quality check | `bun run verify`                                  |
 
-Docs and diagram commands require one project slug. Root pipeline docs are included with the `artifact-generator` collection.
+The `docs:build` shortcut selects `artifact-generator`, including root pipeline docs. Use the direct compiler command to select another docs collection. Diagram commands take one project slug.
 
 ```bash
-bun run docs:build -- cipher
+bun scripts/docs/document-artifact.ts cipher
 bun run diagrams:render -- connor-hunter
 ```
 
@@ -143,12 +151,15 @@ Each docs collection contains readable Markdown pages, a small `index.json` navi
 ```text
 scripts/core/         shared filesystem, process, environment, logging, and paths
 scripts/docs/         Markdown discovery and docs artifact compilation
+scripts/content/      profile and project content compilation
 scripts/diagrams/     Mermaid validation, rendering, and openers
 scripts/coverage/     LCOV parsing and JSON/PDF reports
+scripts/changelog/    canonical changelog Markdown/PDF
 scripts/dependencies/ dependency policy sync
 scripts/git-hooks/    local Git hook setup
 scripts/publish/      source sync and generated bundle publishing
 scripts/resume/       selected LaTeX resume compilation
+scripts/local/        artifact server with sibling report overlays
 test/                 tests arranged to mirror the script folders
 ```
 
@@ -168,7 +179,7 @@ The project uses Bun for installs, scripts, and tests. TypeScript is compiled wi
 
 ## Quality Checks
 
-`bun run verify` runs the dependency audit, Oxfmt formatting check, Oxlint check, TypeScript typecheck, test suite, and local CodeQL security scan. Oxlint limits production scripts to 15 classic complexity paths. The committed pre-commit and pre-push hooks run the same command. GitHub Actions defers this local scan to the repository's hosted CodeQL checks.
+`bun run verify` checks branch naming and package/changelog version alignment, then runs the dependency audit, Oxfmt, Oxlint, TypeScript, tests, and CodeQL. Oxlint limits production scripts to 15 classic complexity paths. The committed pre-commit and pre-push hooks run the same command. GitHub Actions defers the local scan to the repository's hosted CodeQL checks. Run `bun run test:coverage` separately for the coverage gate and report generation.
 
 The local scan covers JavaScript, TypeScript, and GitHub Actions with the security-extended suites. Its checked-in baseline is empty; any finding fails verification.
 
