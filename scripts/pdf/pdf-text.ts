@@ -45,8 +45,29 @@ export function writeInline(
   width: number,
   size: number = pdfStyle.bodySize,
 ): void {
-  const runs = textRuns(items, links).filter((run) => run.value.length > 0);
-  if (!runs.length) return;
+  const lines: TextRun[][] = [[]];
+  for (const run of textRuns(items, links)) {
+    for (const [index, value] of run.value.split("\n").entries()) {
+      if (index) lines.push([]);
+      if (value) lines.at(-1)!.push({ ...run, value });
+    }
+  }
+  for (const runs of lines) {
+    if (!runs.length) {
+      if (lines.length > 1) document.font("body").fontSize(size).moveDown();
+      continue;
+    }
+    writeLine(document, runs, x, width, size);
+  }
+}
+
+function writeLine(
+  document: PDFKit.PDFDocument,
+  runs: ReadonlyArray<TextRun>,
+  x: number,
+  width: number,
+  size: number,
+): void {
   document.x = x;
   for (const [index, run] of runs.entries()) {
     document
@@ -58,8 +79,9 @@ export function writeInline(
         lineGap: pdfStyle.lineGap,
         continued: index < runs.length - 1,
         link: run.link ?? null,
-        goTo: run.goTo,
-      });
+        // PDFKit accepts null to clear a destination inherited from a continued span.
+        goTo: run.goTo ?? null,
+      } as PDFKit.Mixins.TextOptions);
   }
   document.x = x;
 }

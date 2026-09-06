@@ -5,7 +5,8 @@ import PDFDocument from "pdfkit";
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import { compileMarkdownBlocks } from "../../scripts/docs/markdown-document.ts";
 import { writePdf } from "../../scripts/pdf/write-pdf.ts";
-import { pdfLink } from "../../scripts/pdf/pdf-text.ts";
+import { pdfLink, writeInline } from "../../scripts/pdf/pdf-text.ts";
+import { registerPdfFonts } from "../../scripts/pdf/pdf-style.ts";
 
 let root: string;
 beforeEach(() => {
@@ -110,4 +111,30 @@ test("only emits supported links and known document destinations", () => {
   expect(
     pdfLink({ type: "link", children: [], target: { kind: "document", id: "missing" } }, links),
   ).toEqual({});
+});
+
+test("starts explicit line breaks at the paragraph margin and ends link annotations", () => {
+  const document = new PDFDocument({ margins: { top: 50, bottom: 50, left: 50, right: 50 } });
+  registerPdfFonts(document);
+  const start = document.y;
+  writeInline(
+    document,
+    [
+      { type: "text", value: "Read " },
+      {
+        type: "link",
+        children: [{ type: "code", value: "reference" }],
+        target: { kind: "document", id: "reference" },
+      },
+      { type: "text", value: " for details.\n" },
+      { type: "strong", value: "Next line" },
+    ],
+    { destinations: new Set(["reference"]) },
+    50,
+    512,
+  );
+  expect(document.x).toBe(50);
+  expect(document.y - start).toBeGreaterThan(25);
+  expect(document.page.annotations).toHaveLength(1);
+  document.destroy();
 });
