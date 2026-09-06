@@ -19,7 +19,7 @@ bun run artifacts:source:sync
 bun run docs:build
 ```
 
-`artifacts:source:sync` copies the private S3 source inputs into the ignored `tmp/s3-inputs/` folder. Renderers and publish commands use that local copy.
+`artifacts:source:sync` downloads all seven private S3 source folders into a staging directory. It validates the complete download before replacing the ignored `tmp/s3-inputs/` working copy. An interrupted download leaves the previous copy available. Renderers and publish commands use that local copy.
 
 `bun run verify` checks the repository code. It clears `dist/` during its build, so run it before producing the final docs or publication bundle.
 
@@ -35,6 +35,8 @@ bun run docs:build
 `artifacts:ship` does not publish editable source inputs. Run `artifacts:source:publish` first when docs, diagrams, metadata, resume source, or icons change. The selected resume source is staged under `dist/` and compiled during the artifact build.
 
 Source publication replaces all seven configured input folders with S3 sync and `--delete`. Generated publication also uses `--delete`, while preserving other projects' coverage and changelogs. Publish complete bundles at those roots. A docs-only update can use scoped source-file uploads and complete `docs/<project>/` collections; see the [deployment documentation](https://connorhunter.me/projects/artifact-generator/docs).
+
+Before uploading a generated bundle, the publisher checks project membership, local resource paths, docs metadata, diagram stamps, icons, and PDFs. Missing or inconsistent resources stop publication before the first AWS command. CloudFront invalidations run only after both bundle uploads succeed.
 
 ## Source Inputs
 

@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
-import { copyFile, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 export { copyFile };
 
@@ -24,4 +25,20 @@ export async function pathExists(path: string): Promise<boolean> {
 
 export function ensureDirectory(path: string): void {
   mkdirSync(path, { recursive: true });
+}
+
+/** Writes beside the destination and replaces it only after the new file is complete. */
+export async function writeAtomically(
+  output: string,
+  write: (temporary: string) => Promise<void>,
+): Promise<void> {
+  await mkdir(dirname(output), { recursive: true });
+  const staged = await mkdtemp(join(dirname(output), ".artifact-"));
+  try {
+    const temporary = join(staged, "output");
+    await write(temporary);
+    await rename(temporary, output);
+  } finally {
+    await rm(staged, { recursive: true, force: true });
+  }
 }
