@@ -2,7 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { marked, type Token, type Tokens } from "marked";
 import { artifactPaths, sourceInputDirs } from "../core/script-constants.ts";
-import { readText } from "../core/bun-native-fs.ts";
+import { readText } from "../core/file-system.ts";
 import { writePdf } from "../pdf/write-pdf.ts";
 import {
   artifactProjectSlug,

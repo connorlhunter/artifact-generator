@@ -1,18 +1,17 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, type ReadStream } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   copyFile,
   ensureDirectory,
-  fileReadStream,
   pathExists,
   readText,
   removePath,
   writeText,
-} from "../../scripts/core/bun-native-fs.ts";
+} from "../../scripts/core/file-system.ts";
 
-describe("bun native fs helpers", () => {
+describe("file system helpers", () => {
   let tempDir = "";
 
   beforeEach(() => {
@@ -23,7 +22,7 @@ describe("bun native fs helpers", () => {
     rmSync(tempDir, { force: true, recursive: true });
   });
 
-  test("reads, writes, checks, and streams files through the Node fallback", async () => {
+  test("reads, writes, and checks source paths", async () => {
     const file = join(tempDir, "file.txt");
 
     await writeText(file, "hello");
@@ -32,21 +31,7 @@ describe("bun native fs helpers", () => {
     expect(await readText(file)).toBe("hello");
     expect(await pathExists(file)).toBe(true);
     expect(await pathExists(join(tempDir, "missing.txt"))).toBe(false);
-    const stream = fileReadStream(file);
-    if ("getReader" in stream) {
-      expect(typeof stream.getReader).toBe("function");
-      await stream.cancel();
-    } else {
-      const nodeStream = stream as ReadStream;
-      expect("close" in nodeStream).toBe(true);
-      await new Promise<void>((resolve, reject) => {
-        nodeStream.once("open", () => {
-          nodeStream.destroy();
-          resolve();
-        });
-        nodeStream.once("error", reject);
-      });
-    }
+    expect(await pathExists(tempDir)).toBe(true);
   });
 
   test("ensures directories and removes files or folders", async () => {
@@ -66,7 +51,7 @@ describe("bun native fs helpers", () => {
     expect(await pathExists(looseFile)).toBe(false);
   });
 
-  test("copies files through the Node fallback", async () => {
+  test("copies file bytes", async () => {
     const source = join(tempDir, "source.svg");
     const target = join(tempDir, "target.svg");
 

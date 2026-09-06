@@ -2,7 +2,7 @@ import { cpSync, existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { TOML } from "bun";
 import type { CommandContext, CommandOptions, CommandOutput } from "../core/command-types.ts";
-import { copyFile, ensureDirectory, removePath } from "../core/bun-native-fs.ts";
+import { copyFile, ensureDirectory, removePath } from "../core/file-system.ts";
 import { artifactPaths, executables, sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logCaughtError, logHeading, logSuccess } from "../core/script-logger.ts";
