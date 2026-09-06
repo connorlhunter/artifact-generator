@@ -1,5 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { artifactPath } from "../core/artifact-path.ts";
+import { readProjectManifest } from "./project-manifest.ts";
 import { sourceInputDirs } from "../core/script-constants.ts";
 import { compileMarkdownBlocks, type DocumentBlock } from "../docs/document-artifact.ts";
 import type { MarkdownDoc } from "../docs/docs-utils.ts";
@@ -14,10 +16,6 @@ interface ContentManifestSource {
     readonly skillsPath: string;
     readonly socialLinksPath: string;
   };
-}
-
-interface ProjectManifestSource {
-  readonly projects: Record<string, unknown>;
 }
 
 interface ProjectContent {
@@ -66,7 +64,7 @@ function parseFrontmatter(raw: string): { readonly body: string; readonly metada
 }
 
 function sourcePath(path: string): string {
-  return join(sourceInputDirs.artifacts, path);
+  return artifactPath(sourceInputDirs.artifacts, path);
 }
 
 function sourceJson(path: string): unknown {
@@ -107,9 +105,7 @@ export function buildSiteContentArtifact(
   const manifest = JSON.parse(
     readFileSync(join(sourceInputDirs.manifests, "content-manifest.json"), "utf8"),
   ) as ContentManifestSource;
-  const projectManifest = JSON.parse(
-    readFileSync(join(sourceInputDirs.manifests, "project-artifacts.json"), "utf8"),
-  ) as ProjectManifestSource;
+  const projects = readProjectManifest(join(sourceInputDirs.manifests, "project-artifacts.json"));
   const social = sourceJson(manifest.profile.socialLinksPath) as Record<string, unknown>;
   const timeline = sourceJson(manifest.profile.experiencePath) as Record<string, unknown>;
   const content: SiteContentArtifact = {
@@ -121,7 +117,7 @@ export function buildSiteContentArtifact(
     ...(manifest.lastUpdated ? { lastUpdated: manifest.lastUpdated } : {}),
     navigation: sourceJson(manifest.profile.navigationPath),
     profile: sourceJson(manifest.profile.profilePath),
-    projects: Object.keys(projectManifest.projects)
+    projects: Object.keys(projects)
       .map(projectContent)
       .sort((left, right) => left.order - right.order),
     resume: social.resume ?? {},

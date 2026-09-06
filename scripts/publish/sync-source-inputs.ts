@@ -1,4 +1,7 @@
-import { existsSync, lstatSync, rmSync } from "node:fs";
+import { existsSync, lstatSync, mkdtempSync, renameSync, rmSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { sourceInputRoot } from "../core/script-constants.ts";
+import { validateSourceInputSelection } from "../core/source-input-selection.ts";
 import { ensureDirectory } from "../core/file-system.ts";
 import { runCommand } from "../core/process-utils.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
@@ -27,15 +30,18 @@ export interface SyncSourceInputsOptions {
   readonly env?: NodeJS.ProcessEnv;
 }
 
-/**
- * @param target - Working input folder to replace before syncing.
- */
-function resetTargetDirectory(target: string): void {
-  if (existsSync(target) || isSymlink(target)) {
-    rmSync(target, { force: true, recursive: true });
+/** Replaces the working bundle only after all downloads have succeeded. */
+function replaceSourceRoot(staged: string): void {
+  const backup = `${staged}-previous`;
+  const hadPrevious = existsSync(sourceInputRoot) || isSymlink(sourceInputRoot);
+  if (hadPrevious) renameSync(sourceInputRoot, backup);
+  try {
+    renameSync(staged, sourceInputRoot);
+  } catch (error) {
+    if (hadPrevious) renameSync(backup, sourceInputRoot);
+    throw error;
   }
-
-  ensureDirectory(target);
+  rmSync(backup, { force: true, recursive: true });
 }
 
 /**
@@ -72,18 +78,25 @@ export async function syncSourceInputs(options: SyncSourceInputsOptions = {}): P
   const plans = sourceSyncPlans(options.env ?? process.env);
   logHeading("Syncing artifact source inputs from S3", { count: plans.length });
 
-  for (const plan of plans) {
-    const source = sourceInputS3Uri(plan);
-    resetTargetDirectory(plan.target);
-    logItem(`${plan.label}: ${source} -> ${plan.target}`, 1);
-
-    await commandRunner("aws", ["s3", "sync", source, plan.target, "--delete"], {
-      subject: plan.label,
-    });
-
-    if (plan.required && !hasSourceEntries(plan.target)) {
-      throw new Error(`No source files synced for ${plan.label}: ${source}`);
+  ensureDirectory(dirname(sourceInputRoot));
+  const staged = mkdtempSync(`${sourceInputRoot}-sync-`);
+  try {
+    for (const plan of plans) {
+      const source = sourceInputS3Uri(plan);
+      const target = join(staged, relative(sourceInputRoot, plan.target));
+      ensureDirectory(target);
+      logItem(`${plan.label}: ${source} -> ${plan.target}`, 1);
+      await commandRunner("aws", ["s3", "sync", source, target, "--delete"], {
+        subject: plan.label,
+      });
+      if (plan.required && !hasSourceEntries(target)) {
+        throw new Error(`No source files synced for ${plan.label}: ${source}`);
+      }
     }
+    validateSourceInputSelection({ args: [], mode: "cache", root: staged });
+    replaceSourceRoot(staged);
+  } finally {
+    rmSync(staged, { force: true, recursive: true });
   }
 
   logSuccess("Synced artifact source inputs from S3");
