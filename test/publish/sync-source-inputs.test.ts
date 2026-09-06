@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { afterAll, afterEach, describe, expect, spyOn, test } from "bun:test";
 import { createIsolatedSourceInputs } from "../resources/isolated-source-inputs.ts";
 
@@ -40,7 +40,7 @@ describe("sync source inputs", () => {
     ]);
   });
 
-  test("resets and syncs every configured source folder", async () => {
+  test("stages every source folder before replacing the working bundle", async () => {
     const commands: Array<{ readonly args: ReadonlyArray<string>; readonly subject: unknown }> = [];
     spyOn(console, "log").mockImplementation(() => undefined);
     const staleFile = `${sourceInputRoot}/artifacts/docs/stale.txt`;
@@ -52,7 +52,7 @@ describe("sync source inputs", () => {
         const target = args[3];
         if (!target) throw new Error("Missing sync target.");
 
-        if (target.endsWith("/artifacts/docs")) expect(existsSync(staleFile)).toBe(false);
+        expect(existsSync(staleFile)).toBe(true);
         mkdirSync(target, { recursive: true });
         writeFileSync(`${target}/fixture.txt`, "fixture");
         commands.push({ args, subject: context?.subject });
@@ -65,12 +65,14 @@ describe("sync source inputs", () => {
     });
 
     expect(commands).toHaveLength(7);
+    expect(existsSync(staleFile)).toBe(false);
+    expect(readFileSync(`${sourceInputRoot}/artifacts/docs/fixture.txt`, "utf8")).toBe("fixture");
     expect(commands[0]).toEqual({
       args: [
         "s3",
         "sync",
         "s3://artifact-source/docs",
-        `${sourceInputRoot}/artifacts/docs`,
+        expect.stringContaining("/artifacts/docs"),
         "--delete",
       ],
       subject: "Docs source",
@@ -80,11 +82,31 @@ describe("sync source inputs", () => {
         "s3",
         "sync",
         "s3://asset-source/icons",
-        `${sourceInputRoot}/assets/icons`,
+        expect.stringContaining("/assets/icons"),
         "--delete",
       ],
       subject: "Icon source",
     });
+  });
+
+  test("retains every working folder when a later download fails", async () => {
+    const path = `${sourceInputRoot}/artifacts/docs/current.md`;
+    mkdirSync(`${sourceInputRoot}/artifacts/docs`, { recursive: true });
+    writeFileSync(path, "current docs");
+    let requests = 0;
+    await expect(
+      syncSourceInputs({
+        commandRunner: async (_command, args) => {
+          requests += 1;
+          if (requests === 2) throw new Error("Download interrupted");
+          writeFileSync(`${args[3]}/replacement.md`, "replacement");
+          return { stderr: "", stdout: "" };
+        },
+        env: { SOURCE_ARTIFACTS_BUCKET: "source", SOURCE_ASSETS_BUCKET: "assets" },
+      }),
+    ).rejects.toThrow("Download interrupted");
+    expect(readFileSync(path, "utf8")).toBe("current docs");
+    expect(existsSync(`${sourceInputRoot}/artifacts/docs/replacement.md`)).toBe(false);
   });
 
   test("requires both source buckets", () => {

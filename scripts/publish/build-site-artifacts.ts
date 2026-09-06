@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readProjectManifest } from "../content/project-manifest.ts";
 import { renderCoveragePdf } from "../coverage/render-coverage-pdf.ts";
 import { renderCoverageReport } from "../coverage/render-coverage-report.ts";
 import { buildChangelogArtifact } from "../changelog/changelog-artifact.ts";
@@ -22,16 +22,6 @@ import {
 } from "./assemble-site-artifacts.ts";
 
 const projectManifestPath = `${sourceInputDirs.manifests}/project-artifacts.json`;
-
-/**
- * Project artifact manifest shape needed by this publish command.
- */
-interface ProjectManifest {
-  /**
-   * Projects keyed by portfolio slug.
-   */
-  readonly projects: Record<string, unknown>;
-}
 
 /** Dependencies used to build the published artifact bundle. */
 export interface BuildSiteArtifactActions {
@@ -73,9 +63,7 @@ const defaultActions: BuildSiteArtifactActions = {
  * @returns Ordered project slugs.
  */
 export function projectSlugsFromManifest(manifestPath = projectManifestPath): string[] {
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectManifest;
-
-  return Object.keys(manifest.projects);
+  return Object.keys(readProjectManifest(manifestPath));
 }
 
 /**
