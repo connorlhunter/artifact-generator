@@ -10,6 +10,8 @@ import {
 import { basename, dirname, join, relative } from "node:path";
 import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 import { ensureDirectory } from "../core/file-system.ts";
+import { artifactPath } from "../core/artifact-path.ts";
+import { readProjectManifest, validateProjectSlug } from "../content/project-manifest.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import {
   diagramOutputPath,
@@ -31,17 +33,6 @@ export const publishOutputs = {
   siteArtifacts: join(repoDirs.dist, "site-artifacts"),
   siteAssets: join(repoDirs.dist, "site-assets"),
 } as const;
-
-interface ProjectArtifactManifestSourceEntry {
-  readonly coverageComingSoon?: boolean;
-  readonly diagramPaths?: readonly string[];
-  readonly iconPath: string;
-  readonly overviewDiagramPath?: string;
-}
-
-interface ProjectArtifactManifestSource {
-  readonly projects: Record<string, ProjectArtifactManifestSourceEntry>;
-}
 
 interface PublishedDiagram {
   readonly id: string;
@@ -183,6 +174,7 @@ export function cleanPublishOutputs(): void {
  * @param project - Project slug for the docs artifact.
  */
 export function copyDocsArtifact(project = defaultDocsProject): void {
+  validateProjectSlug(project);
   copyPath({
     label: "Docs artifact",
     required: true,
@@ -200,9 +192,9 @@ export function copyDocsArtifact(project = defaultDocsProject): void {
 export function compileProjectArtifactManifest(
   manifestPath = join(publishOutputs.siteArtifacts, "manifests", "project-artifacts.json"),
 ): void {
-  const source = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifestSource;
+  const source = readProjectManifest(manifestPath);
   const projects = Object.fromEntries(
-    Object.entries(source.projects).map(([slug, project]) => [
+    Object.entries(source).map(([slug, project]) => [
       slug,
       publishedProjectArtifact(slug, project),
     ]),
@@ -237,7 +229,7 @@ function versionedPublishedDiagramPath(diagramPath: string): string {
   }
 
   const sourceRelativePath = diagramSourcePath(diagramPath.slice(prefix.length));
-  const sourcePath = join(sourceInputDirs.diagrams, sourceRelativePath);
+  const sourcePath = artifactPath(sourceInputDirs.diagrams, sourceRelativePath);
   const outputPath = diagramOutputPath(sourcePath, readDiagramMetadata(sourcePath));
   const outputRelativePath = relative(sourceInputDirs.diagrams, outputPath).replaceAll("\\", "/");
 
@@ -248,7 +240,7 @@ function versionedPublishedDiagramPath(diagramPath: string): string {
 function publishedDiagram(svgPath: string, overview: boolean): PublishedDiagram {
   const prefix = `${repoDirs.diagrams}/`;
   const sourceRelativePath = diagramSourcePath(svgPath.slice(prefix.length));
-  const sourcePath = join(sourceInputDirs.diagrams, sourceRelativePath);
+  const sourcePath = artifactPath(sourceInputDirs.diagrams, sourceRelativePath);
   const metadata = readDiagramMetadata(sourcePath);
   const sourceName = basename(sourceRelativePath, ".mmd");
   const projectFolder = sourceRelativePath.split("/")[0] ?? "";
@@ -269,10 +261,24 @@ function publishedDiagram(svgPath: string, overview: boolean): PublishedDiagram 
 /** Compiles one project entry without exposing retired browser-viewer paths. */
 function publishedProjectArtifact(
   slug: string,
-  source: ProjectArtifactManifestSourceEntry,
+  source: Record<string, unknown>,
 ): PublishedProjectArtifactManifest["projects"][string] {
+  const paths = source.diagramPaths;
+  if (
+    typeof source.iconPath !== "string" ||
+    !Array.isArray(paths) ||
+    !paths.every((path) => typeof path === "string")
+  ) {
+    throw new Error(`Project ${slug} requires an icon path and an array of diagram paths.`);
+  }
+  if (source.coverageComingSoon !== undefined && typeof source.coverageComingSoon !== "boolean") {
+    throw new Error(`Project ${slug} coverageComingSoon must be a boolean.`);
+  }
+  if (source.overviewDiagramPath !== undefined && typeof source.overviewDiagramPath !== "string") {
+    throw new Error(`Project ${slug} overviewDiagramPath must be a string.`);
+  }
   const projectDiagramPrefix = `${repoDirs.diagrams}/${slug}/`;
-  const diagrams = (source.diagramPaths ?? [])
+  const diagrams = paths
     .filter((path) => path.startsWith(projectDiagramPrefix))
     .map((path) => publishedDiagram(path, path === source.overviewDiagramPath));
 
