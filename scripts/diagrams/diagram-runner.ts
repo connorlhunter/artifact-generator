@@ -1,10 +1,5 @@
-import {
-  allSettledWithFirstPriority,
-  compactName,
-  failedResults,
-  groupByProject,
-  validateOutputPath,
-} from "./diagram-utils.ts";
+import { allSettledWithFirstPriority, failedResults } from "../core/async-tasks.ts";
+import { compactName, groupByProject, validateOutputPath } from "./diagram-utils.ts";
 import { stampRenderedDiagram } from "./stamp-diagram.ts";
 import { runCommand } from "../core/process-utils.ts";
 import { executables } from "../core/script-constants.ts";

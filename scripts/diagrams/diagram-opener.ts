@@ -1,10 +1,6 @@
+import { allSettledWithPriorityPrefix, failedResults } from "../core/async-tasks.ts";
 import { pathExists } from "../core/file-system.ts";
-import {
-  allSettledWithPriorityPrefix,
-  compactName,
-  failedResults,
-  isOverviewDiagram,
-} from "./diagram-utils.ts";
+import { compactName, isOverviewDiagram } from "./diagram-utils.ts";
 import { diagramSourcePath } from "./diagram-metadata.ts";
 import { openDefaultFile } from "../core/file-opener.ts";
 import {
