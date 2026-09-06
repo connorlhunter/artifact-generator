@@ -285,6 +285,8 @@ function publishedProjectArtifact(
   if (diagrams.length === 0) {
     throw new Error(`Project manifest requires at least one diagram for ${slug}`);
   }
+  const legendPath = `${repoDirs.diagrams}/diagram-style-key.svg`;
+  if (paths.includes(legendPath)) diagrams.push(publishedDiagram(legendPath, false));
 
   return {
     changelog: {
