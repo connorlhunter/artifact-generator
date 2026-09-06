@@ -1,4 +1,4 @@
-import { plainInline, type DocumentBlock } from "../content/document-model.ts";
+import { plainInline, type DocumentBlock, type DocumentInline } from "../content/document-model.ts";
 import { contentWidth, ensureSpace, pdfStyle } from "./pdf-style.ts";
 import { writeInline, type PdfLinks } from "./pdf-text.ts";
 import { writeTable } from "./pdf-table.ts";
@@ -76,12 +76,37 @@ function code(document: PDFKit.PDFDocument, value: string, x: number, language?:
   document.x = x;
 }
 
+function referenceLinks(block: Extract<DocumentBlock, { type: "list" }>): DocumentInline[] {
+  if (block.ordered || block.items.length < 2) return [];
+  const references: DocumentInline[] = [];
+  for (const item of block.items) {
+    const paragraph = item[0];
+    if (
+      item.length !== 1 ||
+      paragraph?.type !== "paragraph" ||
+      paragraph.content.length !== 1 ||
+      paragraph.content[0]?.type !== "link"
+    )
+      return [];
+    if (references.length) references.push({ type: "text", value: "  ·  " });
+    references.push(paragraph.content[0]);
+  }
+  return references;
+}
+
 function list(
   document: PDFKit.PDFDocument,
   block: Extract<DocumentBlock, { type: "list" }>,
   links: PdfLinks,
   x: number,
 ): void {
+  const references = referenceLinks(block);
+  if (references.length) {
+    ensureSpace(document, 38);
+    writeInline(document, references, links, x, contentWidth(document, x));
+    document.y += 8;
+    return;
+  }
   for (const [index, item] of block.items.entries()) {
     ensureSpace(document, 38);
     document
