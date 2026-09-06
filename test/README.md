@@ -9,6 +9,7 @@ The test suite covers the repository-owned TypeScript scripts for structured doc
 - `diagrams/*.test.ts`: tests for Mermaid discovery, validation, rendering, and openers.
 - `coverage/*.test.ts`: tests for this repository's JSON and PDF coverage artifacts.
 - `artifacts/*.test.ts`: tests for native resource contracts and compiled portfolio content.
+- `content/*.test.ts`: JSON frontmatter parsing, including escaped quotes and trailing commas.
 - `changelog/*.test.ts`: tests for changelog Markdown/PDF publication.
 - `pdf/*.test.ts`: generated PDF structure, links, long tables and code blocks, and failed-write recovery.
 - `local/*.test.ts`: tests for local artifact serving and sibling report overlays.

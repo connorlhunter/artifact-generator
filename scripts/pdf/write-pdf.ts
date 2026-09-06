@@ -1,9 +1,8 @@
 import { createWriteStream } from "node:fs";
-import { mkdir, mkdtemp, rename, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import PDFDocument from "pdfkit";
 import type { DocumentBlock } from "../content/document-model.ts";
+import { writeAtomically } from "../core/file-system.ts";
 import { writeBlocks } from "./pdf-blocks.ts";
 import { contentWidth, ensureSpace, pdfStyle, registerPdfFonts } from "./pdf-style.ts";
 
@@ -109,10 +108,7 @@ function render(document: PDFKit.PDFDocument, options: WritePdfOptions): void {
 
 /** Replaces an output only after the complete PDF has been written successfully. */
 export async function writePdf(options: WritePdfOptions): Promise<string> {
-  await mkdir(dirname(options.output), { recursive: true });
-  const staged = await mkdtemp(join(dirname(options.output), ".pdf-"));
-  const temporary = join(staged, "document.pdf");
-  try {
+  await writeAtomically(options.output, async (temporary) => {
     const document = new PDFDocument({
       bufferPages: true,
       info: { Title: options.title, Author: "Connor Hunter" },
@@ -131,9 +127,6 @@ export async function writePdf(options: WritePdfOptions): Promise<string> {
       await writing.catch(() => undefined);
       throw error;
     }
-    await rename(temporary, options.output);
-  } finally {
-    await rm(staged, { recursive: true, force: true });
-  }
+  });
   return options.output;
 }

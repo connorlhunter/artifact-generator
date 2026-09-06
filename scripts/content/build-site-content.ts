@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { artifactPath } from "../core/artifact-path.ts";
-import { readProjectManifest } from "./project-manifest.ts";
+import { jsonObject, readProjectManifest } from "./project-manifest.ts";
+import { parseFrontmatter } from "./frontmatter.ts";
 import { sourceInputDirs } from "../core/script-constants.ts";
 import { compileMarkdownBlocks } from "../docs/markdown-document.ts";
 import type { DocumentBlock } from "./document-model.ts";
@@ -50,20 +51,6 @@ export interface SiteContentArtifact {
   readonly skills: unknown;
 }
 
-const frontmatterPattern = /^---\s*\n(?<json>[\s\S]*?)\n---\s*\n?(?<body>[\s\S]*)$/u;
-
-function parseFrontmatter(raw: string): { readonly body: string; readonly metadata: unknown } {
-  const match = frontmatterPattern.exec(raw);
-  if (!match?.groups?.json || match.groups.body === undefined) {
-    throw new Error("Expected JSON frontmatter delimited by ---.");
-  }
-
-  return {
-    body: match.groups.body.trim(),
-    metadata: JSON.parse(match.groups.json.replace(/,\s*([}\]])/gu, "$1")),
-  };
-}
-
 function sourcePath(path: string): string {
   return artifactPath(sourceInputDirs.artifacts, path);
 }
@@ -76,7 +63,7 @@ function projectContent(slug: string): ProjectContent {
   const document = parseFrontmatter(
     readFileSync(join(sourceInputDirs.projects, `${slug}.md`), "utf8"),
   );
-  const metadata = document.metadata as Record<string, unknown>;
+  const metadata = jsonObject(document.metadata, `Project ${slug}`);
   const doc: MarkdownDoc = {
     id: `project-${slug}`,
     input: `projects/${slug}.md`,
@@ -107,8 +94,8 @@ export function buildSiteContentArtifact(
     readFileSync(join(sourceInputDirs.manifests, "content-manifest.json"), "utf8"),
   ) as ContentManifestSource;
   const projects = readProjectManifest(join(sourceInputDirs.manifests, "project-artifacts.json"));
-  const social = sourceJson(manifest.profile.socialLinksPath) as Record<string, unknown>;
-  const timeline = sourceJson(manifest.profile.experiencePath) as Record<string, unknown>;
+  const social = jsonObject(sourceJson(manifest.profile.socialLinksPath), "Social links");
+  const timeline = jsonObject(sourceJson(manifest.profile.experiencePath), "Experience");
   const content: SiteContentArtifact = {
     certifications: timeline.certifications ?? [],
     contacts: social.contacts ?? [],

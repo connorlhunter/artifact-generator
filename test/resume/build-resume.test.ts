@@ -62,6 +62,58 @@ describe("build resume", () => {
     });
   });
 
+  test("rejects overlapping paths before removing source or build files", async () => {
+    const sourceDirectory = join(tempDirectory, "source");
+    writeResumeSource(sourceDirectory);
+    const build = join(tempDirectory, "build");
+    const output = join(tempDirectory, "resume.pdf");
+    for (const [buildDirectory, outputPdf] of [
+      [sourceDirectory, output],
+      [tempDirectory, output],
+      [join(sourceDirectory, "nested"), output],
+      [build, join(sourceDirectory, "resume.pdf")],
+      [build, join(build, "resume.pdf")],
+    ]) {
+      await expect(
+        buildResume({ sourceDirectory, buildDirectory: buildDirectory!, outputPdf: outputPdf! }),
+      ).rejects.toThrow();
+      expect(existsSync(join(sourceDirectory, "Tectonic.toml"))).toBe(true);
+    }
+  });
+
+  test("preserves the previous download when Tectonic fails", async () => {
+    const sourceDirectory = join(tempDirectory, "source");
+    const buildDirectory = join(tempDirectory, "build");
+    const outputPdf = join(tempDirectory, "resume.pdf");
+    writeResumeSource(sourceDirectory);
+    writeFileSync(outputPdf, "%PDF-previous");
+    await expect(
+      buildResume({
+        sourceDirectory,
+        buildDirectory,
+        outputPdf,
+        runner: async () => {
+          throw new Error("Compilation failed");
+        },
+      }),
+    ).rejects.toThrow("Compilation failed");
+    expect(readFileSync(outputPdf, "utf8")).toBe("%PDF-previous");
+    expect(existsSync(buildDirectory)).toBe(false);
+  });
+
+  test("rejects Tectonic names that escape the build directory", async () => {
+    const sourceDirectory = join(tempDirectory, "source");
+    writeResumeSource(sourceDirectory);
+    const path = join(sourceDirectory, "Tectonic.toml");
+    const original = readFileSync(path, "utf8");
+    for (const name of ["..", "../outside", "nested/file"]) {
+      writeFileSync(path, original.replace("fixture-resume", name));
+      await expect(readResumeProjectConfig(sourceDirectory)).rejects.toThrow(
+        "single path components",
+      );
+    }
+  });
+
   test("requires a selected resume source project", async () => {
     const sourceDirectory = join(tempDirectory, "missing");
 
