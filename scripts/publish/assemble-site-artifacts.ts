@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { artifactPaths, repoDirs, sourceInputDirs } from "../core/script-constants.ts";
-import { ensureDirectory } from "../core/bun-native-fs.ts";
+import { ensureDirectory } from "../core/file-system.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import {
   diagramOutputPath,

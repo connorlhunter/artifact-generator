@@ -8,5 +8,5 @@
   "tabWidth": 2,
   "trailingComma": "all",
   "sortPackageJson": false,
-  "ignorePatterns": ["node_modules", "coverage", "dist", "_work", "bun.lock"]
+  "ignorePatterns": ["node_modules", "/coverage", "dist", "_work", "bun.lock"]
 }

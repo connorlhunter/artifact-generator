@@ -1,4 +1,4 @@
-import { pathExists } from "../core/bun-native-fs.ts";
+import { pathExists } from "../core/file-system.ts";
 import {
   allSettledWithPriorityPrefix,
   compactName,

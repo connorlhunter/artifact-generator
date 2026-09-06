@@ -1,6 +1,6 @@
 {
   "ignorePatterns": [
-    "coverage/**",
+    "/coverage/**",
     "dist/**",
     "node_modules/**",
     "tmp/**",
@@ -15,13 +15,13 @@
     {
       "files": ["scripts/**/*.ts"],
       "rules": {
-        "complexity": ["error", { "max": 15, "variant": "classic" }]
-      }
-    },
-    {
-      "files": ["scripts/docs/preview/browser/**/*.ts"],
-      "rules": {
-        "no-unused-vars": "off"
+        "complexity": [
+          "error",
+          {
+            "max": 15,
+            "variant": "classic"
+          }
+        ]
       }
     }
   ]

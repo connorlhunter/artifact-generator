@@ -58,9 +58,14 @@ describe("coverage artifact", () => {
     writeFileSync(lcovPath, lcov);
 
     await expect(
-      renderCoverageReport(lcovPath, reportPath, { functions: 100, lines: 100 }, {
-        updatedAt: "2026-08-27T12:00:00.000Z",
-      }),
+      renderCoverageReport(
+        lcovPath,
+        reportPath,
+        { functions: 100, lines: 100 },
+        {
+          updatedAt: "2026-08-27T12:00:00.000Z",
+        },
+      ),
     ).resolves.toBe(reportPath);
     await expect(renderCoveragePdf(reportPath, pdfPath)).resolves.toBe(pdfPath);
 
@@ -77,7 +82,36 @@ describe("coverage artifact", () => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "artifact-coverage-"));
 
     await expect(
-      renderCoveragePdf(join(temporaryDirectory, "missing.json"), join(temporaryDirectory, "report.pdf")),
+      renderCoveragePdf(
+        join(temporaryDirectory, "missing.json"),
+        join(temporaryDirectory, "report.pdf"),
+      ),
     ).rejects.toThrow("Missing coverage artifact");
   });
+});
+
+test.each([
+  "",
+  "TN:empty\n",
+  lcov.replace("end_of_record", ""),
+  lcov.replace("LF:10", "LF:0").replace("LH:10", "LH:0"),
+  lcov.replace("LH:10", "LH:11"),
+  lcov.replace("LH:10\n", ""),
+  lcov.replace("LH:10", "LH:NaN"),
+  lcov.replace("LH:10", "LH:-1"),
+  lcov.replace("LH:10", "LH:1.5"),
+  lcov.replace("LH:10", "LH:9007199254740992"),
+  lcov.replace("LH:10", "LH:10\nLH:10"),
+  lcov.replace("BRH:0\n", ""),
+  lcov.replace("SF:src/example.ts", "SF:"),
+  `${lcov.replace("end_of_record", "")}\n${lcov}`,
+])("rejects malformed or empty LCOV: %s", (invalid) => {
+  expect(() => parseLcov(invalid)).toThrow();
+});
+
+test("allows complete records without functions or measured branches", () => {
+  const files = parseLcov("SF:constant.ts\r\nLF:1\r\nLH:1\r\nFNF:0\r\nFNH:0\r\nend_of_record\r\n");
+  expect(coverageTotals(files).functions).toEqual({ covered: 0, found: 0 });
+  expect(coverageTotals(files).branches).toEqual({ covered: 0, found: 0 });
+  expect(() => coverageArtifact([], "2026-09-05T00:00:00Z")).toThrow("no measured lines");
 });

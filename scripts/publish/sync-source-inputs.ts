@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, rmSync } from "node:fs";
-import { ensureDirectory } from "../core/bun-native-fs.ts";
+import { ensureDirectory } from "../core/file-system.ts";
 import { runCommand } from "../core/process-utils.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import {
