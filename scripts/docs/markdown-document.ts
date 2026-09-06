@@ -61,7 +61,7 @@ function inlineTokens(
     if (token.type === "image") return [{ type: "text", value: token.text }];
 
     const value = "text" in token && typeof token.text === "string" ? token.text : token.raw;
-    return value ? [{ type: "text", value }] : [];
+    return value ? [{ type: "text", value: value.replace(/[ \t]*\r?\n[ \t]*/gu, " ") }] : [];
   });
 }
 

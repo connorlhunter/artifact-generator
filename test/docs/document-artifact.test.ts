@@ -33,4 +33,23 @@ describe("document artifact", () => {
     expect(artifactProjectSlug("cipher", manifest)).toBe("cipher");
     expect(() => artifactProjectSlug("../outside", manifest)).toThrow("Unknown docs project");
   });
+
+  test("flows source line wrapping around inline code and preserves explicit breaks", () => {
+    const blocks = compileMarkdownBlocks(
+      "A wrapped\nparagraph with `inline code` followed\nby more text.  \nNext line.",
+      { id: "overview", input: "docs/project/overview.md", project: "project" },
+    );
+    expect(blocks).toEqual([
+      {
+        type: "paragraph",
+        content: [
+          { type: "text", value: "A wrapped paragraph with " },
+          { type: "code", value: "inline code" },
+          { type: "text", value: " followed by more text." },
+          { type: "text", value: "\n" },
+          { type: "text", value: "Next line." },
+        ],
+      },
+    ]);
+  });
 });

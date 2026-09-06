@@ -12,7 +12,7 @@ function heading(
   const text = plainInline(block.content);
   document.font("strong").fontSize(size);
   const height = document.heightOfString(text, { width: contentWidth(document, x) });
-  ensureSpace(document, height + 48);
+  ensureSpace(document, height + 64);
   document.y += 10;
   document
     .fillColor(pdfStyle.ink)

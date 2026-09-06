@@ -17,6 +17,7 @@
 - Preserve quoted frontmatter text and completed PDFs when a replacement build fails.
 - Reject overlapping resume paths and handle local artifact HEAD requests, missing files, and unsupported methods consistently.
 - Keep shared diagram legends reachable from the native readers and PDF links.
+- Flow wrapped Markdown paragraphs correctly around inline code, keep headings with their content, and limit PDF links to their text.
 
 ## 1.7.6 - 2026-08-27
 
