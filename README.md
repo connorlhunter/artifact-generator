@@ -146,12 +146,19 @@ bun run diagrams:render -- connor-hunter
 
 Each docs collection contains readable Markdown pages, a small `index.json` navigation file, and a direct PDF. Portfolio turns those Markdown pages into its native reader, including next and previous page links.
 
+### PDF layout
+
+Docs, coverage, and changelog PDFs share the renderer in `scripts/pdf/`. It preserves heading levels, lists, quotes, code blocks, and tables. Docs include linked contents and bookmarks; tables repeat their headers across pages. The renderer embeds the licensed fonts in `resources/pdf-fonts/`, adds page numbers, and replaces an existing PDF only after the new file finishes writing.
+
+After changing the renderer, rebuild all five docs collections plus coverage and changelog PDFs. Render every page with Poppler and check wrapping, page breaks, table headers, and links. The LaTeX resume has its own template and should be inspected separately after a full artifact build.
+
 ## Repository Shape
 
 ```text
 scripts/core/         shared filesystem, process, environment, logging, and paths
 scripts/docs/         Markdown discovery and docs artifact compilation
 scripts/content/      profile and project content compilation
+scripts/pdf/          shared document, table, and text layout
 scripts/diagrams/     Mermaid validation, rendering, and openers
 scripts/coverage/     LCOV parsing and JSON/PDF reports
 scripts/changelog/    canonical changelog Markdown/PDF

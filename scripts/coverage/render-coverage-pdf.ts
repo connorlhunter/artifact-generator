@@ -21,12 +21,25 @@ export async function renderCoveragePdf(
   await writePdf({
     output,
     sections: coverage.surfaces.map((surface) => ({
-      body: [
-        `All files: lines ${metricLabel(surface.totals.lines)}, functions ${metricLabel(surface.totals.functions)}, branches ${metricLabel(surface.totals.branches)}`,
-        ...surface.files.map(
-          (file) =>
-            `${file.path}: lines ${metricLabel(file.lines)}, functions ${metricLabel(file.functions)}, branches ${metricLabel(file.branches)}`,
-        ),
+      blocks: [
+        {
+          type: "table",
+          rows: [
+            ["File", "Lines", "Functions", "Branches"],
+            [
+              "All files",
+              metricLabel(surface.totals.lines),
+              metricLabel(surface.totals.functions),
+              metricLabel(surface.totals.branches),
+            ],
+            ...surface.files.map((file) => [
+              file.path,
+              metricLabel(file.lines),
+              metricLabel(file.functions),
+              metricLabel(file.branches),
+            ]),
+          ].map((row) => row.map((value) => [{ type: "text", value } as const])),
+        },
       ],
       heading: surface.label,
     })),

@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { writePdf } from "../pdf/write-pdf.ts";
+import { compileMarkdownBlocks } from "../docs/markdown-document.ts";
 
 /** One visible section in a release entry. */
 export interface ChangelogSection {
@@ -85,10 +86,19 @@ export async function buildChangelogArtifact(
   writeFileSync(join(output, "CHANGELOG.md"), markdown);
   await writePdf({
     output: join(output, "changelog.pdf"),
-    sections: releases.flatMap((release) => [
-      { body: [`Released ${release.date}`], heading: `v${release.version}` },
-      ...release.sections.map((section) => ({ body: section.entries, heading: section.title })),
-    ]),
+    sections: releases.map((release) => ({
+      heading: `v${release.version}`,
+      subtitle: `Released ${release.date}`,
+      blocks: compileMarkdownBlocks(
+        release.sections
+          .map(
+            (section) =>
+              `### ${section.title}\n\n${section.entries.map((entry) => `- ${entry}`).join("\n")}`,
+          )
+          .join("\n\n"),
+        { id: release.version, input: "CHANGELOG.md", project: "artifact-generator" },
+      ),
+    })),
     subtitle: `Published ${normalizedPublishedAt}`,
     title: "Artifact Generator Changelog",
   });

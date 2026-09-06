@@ -8,7 +8,7 @@ pathIgnorePatterns = ["coverage/**", "dist/**", "node_modules/**"]
 coverageDir = "coverage"
 coverageReporter = ["text", "lcov"]
 coveragePathIgnorePatterns = [
-  "scripts/core/clean-dist.ts",
+  "scripts/core/prepare-build.ts",
   "scripts/diagrams/diagram-types.ts",
   "scripts/diagrams/open-diagrams.ts",
   "scripts/diagrams/render-diagrams.ts",
