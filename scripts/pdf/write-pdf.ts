@@ -84,7 +84,7 @@ function render(document: PDFKit.PDFDocument, options: WritePdfOptions): void {
   for (const [index, section] of options.sections.entries()) {
     if (options.contents && index === 0) document.addPage();
     else {
-      ensureSpace(document, options.contents ? 180 : 100);
+      ensureSpace(document, 180);
       if (document.y > document.page.margins.top) document.y += options.contents ? 24 : 12;
     }
     document
