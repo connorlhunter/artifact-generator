@@ -21,8 +21,8 @@ const {
   orderedDocSections,
   orderedDocsForArtifact,
 } = await import("../../scripts/docs/docs-utils.ts");
-const { buildDocsArtifact, compileMarkdownBlocks } =
-  await import("../../scripts/docs/document-artifact.ts");
+const { buildDocsArtifact } = await import("../../scripts/docs/document-artifact.ts");
+const { compileMarkdownBlocks } = await import("../../scripts/docs/markdown-document.ts");
 const { buildSiteContentArtifact } = await import("../../scripts/content/build-site-content.ts");
 const {
   compileProjectArtifactManifest,

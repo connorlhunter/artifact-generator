@@ -3,7 +3,8 @@ import { dirname, join } from "node:path";
 import { artifactPath } from "../core/artifact-path.ts";
 import { readProjectManifest } from "./project-manifest.ts";
 import { sourceInputDirs } from "../core/script-constants.ts";
-import { compileMarkdownBlocks, type DocumentBlock } from "../docs/document-artifact.ts";
+import { compileMarkdownBlocks } from "../docs/markdown-document.ts";
+import type { DocumentBlock } from "./document-model.ts";
 import type { MarkdownDoc } from "../docs/docs-utils.ts";
 
 interface ContentManifestSource {

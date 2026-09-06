@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { compileMarkdownBlocks } from "../../scripts/docs/document-artifact.ts";
+import { compileMarkdownBlocks } from "../../scripts/docs/markdown-document.ts";
 import { artifactProjectSlug } from "../../scripts/docs/docs-utils.ts";
 
 describe("document artifact", () => {

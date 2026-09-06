@@ -10,6 +10,7 @@ The test suite covers the repository-owned TypeScript scripts for structured doc
 - `coverage/*.test.ts`: tests for this repository's JSON and PDF coverage artifacts.
 - `artifacts/*.test.ts`: tests for native resource contracts and compiled portfolio content.
 - `changelog/*.test.ts`: tests for changelog Markdown/PDF publication.
+- `pdf/*.test.ts`: generated PDF structure, links, long tables and code blocks, and failed-write recovery.
 - `local/*.test.ts`: tests for local artifact serving and sibling report overlays.
 - `dependencies/*.test.ts`: tests for dependency policy syncing.
 - `git-hooks/*.test.ts`: tests for committed hook path setup.
@@ -42,7 +43,7 @@ For a focused test, build once and invoke the test runner directly:
 
 ```bash
 bun run build
-bun test --isolate --timeout 30000 test/docs/docs-utils.test.ts
+bun test --isolate --timeout 30000 test/docs/document-artifact.test.ts
 ```
 
 Tests import from `bun:test`:

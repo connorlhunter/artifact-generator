@@ -22,7 +22,7 @@
     "changelog:publish": "bun run artifacts:ship",
     "deps:policy": "bun scripts/dependencies/sync-dependency-policy.ts",
     "deps:policy:check": "bun scripts/dependencies/sync-dependency-policy.ts --check",
-    "build": "bun scripts/core/clean-dist.ts && bun x tsgo -p tsconfig.json",
+    "build": "bun scripts/core/prepare-build.ts && bun x tsgo -p tsconfig.json",
     "typecheck": "bun x tsgo --noEmit -p tsconfig.json",
     "check": "bun run format:check && bun run lint && bun run typecheck",
     "version:check": "bun scripts/release/check-release-version.ts",

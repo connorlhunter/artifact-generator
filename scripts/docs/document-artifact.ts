@@ -1,15 +1,15 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
-import { marked, type Token, type Tokens } from "marked";
+import { join } from "node:path";
 import { artifactPaths, sourceInputDirs } from "../core/script-constants.ts";
 import { readText } from "../core/file-system.ts";
-import { writePdf } from "../pdf/write-pdf.ts";
+import { writePdf, type PdfSection } from "../pdf/write-pdf.ts";
+import { plainInline, type DocumentBlock } from "../content/document-model.ts";
+import { compileMarkdownBlocks } from "./markdown-document.ts";
 import {
   artifactProjectSlug,
   docGroupTitle,
   docLinkLabel,
   findMarkdownDocs,
-  localMarkdownTargetId,
   markdownSourcePath,
   orderedDocGroups,
   orderedDocSections,
@@ -17,37 +17,6 @@ import {
   type MarkdownDoc,
 } from "./docs-utils.ts";
 import { parseCentralizedDocSource, parseDocSource, readDocumentMetadata } from "./doc-metadata.ts";
-
-/** A safe inline value rendered by Portfolio components. */
-export type DocumentInline =
-  | { readonly type: "code" | "emphasis" | "strong" | "text"; readonly value: string }
-  | {
-      readonly children: ReadonlyArray<DocumentInline>;
-      readonly href?: string;
-      readonly target?: { readonly id: string; readonly kind: "diagram" | "document" };
-      readonly type: "link";
-    };
-
-/** A safe Markdown block rendered by Portfolio components. */
-export type DocumentBlock =
-  | {
-      readonly content: ReadonlyArray<DocumentInline>;
-      readonly id?: string;
-      readonly level?: number;
-      readonly type: "heading" | "paragraph";
-    }
-  | { readonly language?: string; readonly type: "code"; readonly value: string }
-  | {
-      readonly items: ReadonlyArray<ReadonlyArray<DocumentBlock>>;
-      readonly ordered: boolean;
-      readonly type: "list";
-    }
-  | { readonly content: ReadonlyArray<DocumentBlock>; readonly type: "quote" }
-  | {
-      readonly rows: ReadonlyArray<ReadonlyArray<ReadonlyArray<DocumentInline>>>;
-      readonly type: "table";
-    }
-  | { readonly type: "rule" };
 
 /** One compiled documentation page used while writing Markdown and PDF outputs. */
 interface DocumentPage {
@@ -74,174 +43,17 @@ export interface DocumentIndex {
   readonly title: string;
 }
 
-function plainText(tokens: ReadonlyArray<Token> | undefined): string {
-  return (tokens ?? [])
-    .map((token) => {
-      if ("text" in token && typeof token.text === "string") return token.text;
-      if ("raw" in token && typeof token.raw === "string") return token.raw;
-      return "";
-    })
-    .join("")
-    .replace(/\s+/gu, " ")
-    .trim();
-}
-
-function diagramId(source: MarkdownDoc, href: string): string | undefined {
-  const [target] = href.split("#");
-
-  if (!target?.endsWith(".mmd") || /^[a-z]+:/iu.test(target)) return undefined;
-
-  const name = basename(target, ".mmd");
-  const prefix = `${source.project}-`;
-  const compact = name.startsWith(prefix) ? name.slice(prefix.length) : name;
-
-  return compact.replace(/[^a-z0-9]+/giu, "-").replace(/^-+|-+$/gu, "");
-}
-
-function inlineTokens(
-  tokens: ReadonlyArray<Token> | undefined,
-  source: MarkdownDoc,
-  knownIds: Map<string, string>,
-): DocumentInline[] {
-  return (tokens ?? []).flatMap((token): DocumentInline[] => {
-    if (token.type === "strong" || token.type === "em") {
-      return [
-        { type: token.type === "strong" ? "strong" : "emphasis", value: plainText(token.tokens) },
-      ];
-    }
-
-    if (token.type === "codespan") return [{ type: "code", value: token.text }];
-    if (token.type === "br") return [{ type: "text", value: "\n" }];
-
-    if (token.type === "link") {
-      const targetId = localMarkdownTargetId(source, token.href, knownIds);
-      const linkedDiagram = diagramId(source, token.href);
-      const children = inlineTokens(token.tokens, source, knownIds);
-
-      if (targetId) {
-        return [{ children, target: { id: targetId, kind: "document" }, type: "link" }];
-      }
-
-      if (linkedDiagram) {
-        return [{ children, target: { id: linkedDiagram, kind: "diagram" }, type: "link" }];
-      }
-
-      return [{ children, href: token.href, type: "link" }];
-    }
-
-    if (token.type === "image") return [{ type: "text", value: token.text }];
-
-    const value = "text" in token && typeof token.text === "string" ? token.text : token.raw;
-    return value ? [{ type: "text", value }] : [];
-  });
-}
-
-function headingId(value: string, index: number): string {
-  const normalized = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/giu, "-")
-    .replace(/^-+|-+$/gu, "");
-  return normalized ? `${normalized}-${index + 1}` : `section-${index + 1}`;
-}
-
-export function compileMarkdownBlocks(
-  markdown: string,
-  source: MarkdownDoc,
-  knownIds: Map<string, string> = new Map(),
-): DocumentBlock[] {
-  return blockTokens(marked.lexer(markdown, { gfm: true }), source, knownIds);
-}
-
-function blockTokens(
-  tokens: ReadonlyArray<Token>,
-  source: MarkdownDoc,
-  knownIds: Map<string, string>,
-): DocumentBlock[] {
-  let headingIndex = 0;
-
-  return tokens.flatMap((token): DocumentBlock[] => {
-    if (token.type === "space") return [];
-    if (token.type === "hr") return [{ type: "rule" }];
-
-    if (token.type === "heading") {
-      const content = inlineTokens(token.tokens, source, knownIds);
-      const value = plainText(token.tokens) || token.text;
-      return [
-        { content, id: headingId(value, headingIndex++), level: token.depth, type: "heading" },
-      ];
-    }
-
-    if (token.type === "paragraph" || token.type === "text") {
-      return [{ content: inlineTokens(token.tokens, source, knownIds), type: "paragraph" }];
-    }
-
-    if (token.type === "code") {
-      return [{ ...(token.lang ? { language: token.lang } : {}), type: "code", value: token.text }];
-    }
-
-    if (token.type === "blockquote") {
-      return [{ content: blockTokens(token.tokens ?? [], source, knownIds), type: "quote" }];
-    }
-
-    if (token.type === "list") {
-      return [
-        {
-          items: (token.items ?? []).map((item: Tokens.ListItem) =>
-            blockTokens(item.tokens, source, knownIds),
-          ),
-          ordered: token.ordered,
-          type: "list",
-        },
-      ];
-    }
-
-    if (token.type === "table") {
-      return [
-        {
-          rows: [token.header, ...token.rows].map((row) =>
-            row.map((cell: Tokens.TableCell) => inlineTokens(cell.tokens, source, knownIds)),
-          ),
-          type: "table",
-        },
-      ];
-    }
-
-    return [];
-  });
-}
-
-function pageText(blocks: ReadonlyArray<DocumentBlock>): string[] {
-  return blocks.flatMap((block) => {
-    if (block.type === "heading" || block.type === "paragraph") {
-      return [
-        block.content
-          .map((item) => (item.type === "link" ? plainInline(item.children) : item.value))
-          .join(""),
-      ];
-    }
-    if (block.type === "code") return [block.value];
-    if (block.type === "list") return block.items.flatMap((item) => pageText(item));
-    if (block.type === "quote") return pageText(block.content);
-    if (block.type === "table") {
-      return block.rows.map((row) => row.map((cell) => plainInline(cell)).join(" | "));
-    }
-    return [];
-  });
-}
-
-function plainInline(items: ReadonlyArray<DocumentInline>): string {
-  return items
-    .map((item) => (item.type === "link" ? plainInline(item.children) : item.value))
-    .join("");
-}
-
 async function documentPage(
   doc: MarkdownDoc,
   knownIds: Map<string, string>,
+  metadataCache: Map<string, ReturnType<typeof readDocumentMetadata>>,
 ): Promise<DocumentPage> {
   const source = await readText(markdownSourcePath(doc));
+  if (doc.metadataPath && !metadataCache.has(doc.metadataPath)) {
+    metadataCache.set(doc.metadataPath, readDocumentMetadata(doc.metadataPath));
+  }
   const centralizedMetadata = doc.metadataPath
-    ? await readDocumentMetadata(doc.metadataPath)
+    ? await metadataCache.get(doc.metadataPath)
     : undefined;
   const parsed = centralizedMetadata
     ? { body: parseCentralizedDocSource(source, doc.input), metadata: centralizedMetadata }
@@ -254,6 +66,17 @@ async function documentPage(
     lastUpdated: parsed.metadata.lastUpdated,
     title: docLinkLabel(doc),
     version: parsed.metadata.version,
+  };
+}
+
+function pdfSection(page: DocumentPage): PdfSection {
+  const first = page.blocks[0];
+  const hasTitle = first?.type === "heading" && first.level === 1;
+  return {
+    blocks: hasTitle ? page.blocks.slice(1) : page.blocks,
+    heading: hasTitle ? plainInline(first.content) : page.title,
+    id: page.id,
+    subtitle: `v${page.version} · Updated ${page.lastUpdated}`,
   };
 }
 
@@ -273,7 +96,8 @@ export async function buildDocsArtifact(project = "artifact-generator"): Promise
   const output = join(artifactPaths.docsArtifactsDir, projectSlug);
   const pagesDirectory = join(output, "pages");
   const knownIds = new Map(docs.map((doc) => [doc.input, doc.id]));
-  const pages = await Promise.all(docs.map((doc) => documentPage(doc, knownIds)));
+  const metadataCache = new Map<string, ReturnType<typeof readDocumentMetadata>>();
+  const pages = await Promise.all(docs.map((doc) => documentPage(doc, knownIds, metadataCache)));
 
   rmSync(output, { force: true, recursive: true });
   mkdirSync(pagesDirectory, { recursive: true });
@@ -306,9 +130,14 @@ export async function buildDocsArtifact(project = "artifact-generator"): Promise
 
   await writePdf({
     output: join(output, "docs.pdf"),
-    sections: pages.map((page) => ({ body: pageText(page.blocks), heading: page.title })),
-    subtitle: "Markdown documentation export",
+    sections: pages.map(pdfSection),
+    subtitle: `${pages.length} documents · Updated ${pages
+      .map((page) => page.lastUpdated)
+      .sort()
+      .at(-1)}`,
     title: index.title,
+    contents: true,
+    projectUrl: `https://connorhunter.me/projects/${projectSlug}`,
   });
 
   return output;
