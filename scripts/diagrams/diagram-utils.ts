@@ -51,6 +51,11 @@ function isMermaidFile(p: string): boolean {
  */
 /* istanbul ignore next */
 function walk(dir: string, files: string[] = []): string[] {
+  if (statSync(dir).isFile()) {
+    if (dir.endsWith(".mmd")) files.push(dir);
+    return files;
+  }
+
   for (const entry of readdirSync(dir)) {
     if (ignoredDirs.has(entry)) continue;
 
@@ -256,69 +261,6 @@ function sortDiagramJobs(jobs: DiagramJob[]): DiagramJob[] {
 }
 
 /**
- * Filters rejected results out of an allSettled result list.
- *
- * @param {PromiseSettledResult<unknown>[]} results - Results from Promise.allSettled.
- * @returns {PromiseRejectedResult[]} Rejected results.
- */
-export function failedResults<T>(results: PromiseSettledResult<T>[]): PromiseRejectedResult[] {
-  return results.filter((result): result is PromiseRejectedResult => result.status === "rejected");
-}
-
-/**
- * Runs the first item before processing the rest concurrently.
- *
- * This is used for the shared diagram key: it should be rendered/opened first,
- * while the remaining project diagrams still run in parallel.
- *
- * @template T
- * @template R
- * @param {T[]} items - Items to process.
- * @param {(item: T) => Promise<R>} runItem - Async item processor.
- * @returns {Promise<PromiseSettledResult<R>[]>} Settled results in input order.
- */
-export async function allSettledWithFirstPriority<T, R>(
-  items: T[],
-  runItem: (item: T) => Promise<R>,
-): Promise<PromiseSettledResult<R>[]> {
-  return allSettledWithPriorityPrefix(items, 1, runItem);
-}
-
-/**
- * Runs the priority prefix sequentially before processing the rest concurrently.
- *
- * @template T
- * @template R
- * @param {T[]} items - Items to process.
- * @param {number} priorityCount - Number of leading items to run first.
- * @param {(item: T) => Promise<R>} runItem - Async item processor.
- * @returns {Promise<PromiseSettledResult<R>[]>} Settled results in input order.
- */
-export async function allSettledWithPriorityPrefix<T, R>(
-  items: T[],
-  priorityCount: number,
-  runItem: (item: T) => Promise<R>,
-): Promise<PromiseSettledResult<R>[]> {
-  if (items.length === 0) return [];
-
-  const safePriorityCount = Math.max(0, Math.min(priorityCount, items.length));
-  const priorityItems = items.slice(0, safePriorityCount);
-  const rest = items.slice(safePriorityCount);
-  const priorityResults: PromiseSettledResult<R>[] = [];
-
-  for (const item of priorityItems) {
-    try {
-      priorityResults.push({ status: "fulfilled", value: await runItem(item as T) });
-    } catch (reason: unknown) {
-      priorityResults.push({ status: "rejected", reason });
-    }
-  }
-
-  const restResults = await Promise.allSettled(rest.map(runItem));
-  return [...priorityResults, ...restResults];
-}
-
-/**
  * Builds the input/output pairs for every Mermaid diagram under the roots.
  *
  * @param {string[]} roots - Directories to scan.
@@ -327,7 +269,7 @@ export async function allSettledWithPriorityPrefix<T, R>(
 export function findDiagrams(roots: string[] = []): DiagramJob[] {
   if (roots.length === 0) return [];
 
-  const inputs = roots.flatMap((root) => walk(root)).sort();
+  const inputs = uniqueStrings(roots.flatMap((root) => walk(root))).sort();
 
   return sortDiagramJobs(withGlobalDiagrams(inputs).map(diagramJob));
 }

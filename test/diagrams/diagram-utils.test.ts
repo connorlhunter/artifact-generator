@@ -1,10 +1,12 @@
-import { resolve } from "node:path";
-import { describe, expect, test } from "bun:test";
 import {
   allSettledWithFirstPriority,
   allSettledWithPriorityPrefix,
-  compactName,
   failedResults,
+} from "../../scripts/core/async-tasks.ts";
+import { resolve } from "node:path";
+import { describe, expect, test } from "bun:test";
+import {
+  compactName,
   findDiagrams,
   getDiagramRoots,
   groupByProject,
@@ -141,4 +143,12 @@ describe("diagram utils", () => {
       await allSettledWithPriorityPrefix(diagramJobs, 99, async (job) => job.output),
     ).toHaveLength(diagramJobs.length);
   });
+});
+
+test("accepts individual Mermaid files and deduplicates overlapping roots", () => {
+  const diagrams = findDiagrams([diagramsFixtureRoot, diagramPaths.projectDiagram]);
+  expect(diagrams.filter((diagram) => diagram.input === diagramPaths.projectDiagram)).toHaveLength(
+    1,
+  );
+  expect(findDiagrams([diagramPaths.projectDiagram])).toHaveLength(1);
 });
