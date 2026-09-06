@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.7.7 - 2026-09-05
+
+### Changed
+
+- Give docs, coverage, and changelog PDFs embedded fonts, structured Markdown, linked contents, bookmarks, table headers, and page numbers.
+- Share filesystem, task scheduling, Markdown parsing, and artifact-path validation across scripts.
+- Limit concurrent Mermaid jobs and deduplicate overlapping source selections.
+- Refresh the source documentation, project descriptions, diagrams, and resume layout against the current publishing and Portfolio readers.
+
+### Fixed
+
+- Keep the previous source bundle until every S3 download and source check succeeds.
+- Validate complete generated bundles before uploading, including project membership, file paths, metadata, icons, and PDFs.
+- Reject incomplete or invalid LCOV reports and include coverage scripts in formatting checks.
+- Preserve quoted frontmatter text and completed PDFs when a replacement build fails.
+- Reject overlapping resume paths and handle local artifact HEAD requests, missing files, and unsupported methods consistently.
+
 ## 1.7.6 - 2026-08-27
 
 ### Fixed
