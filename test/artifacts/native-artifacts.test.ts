@@ -21,8 +21,8 @@ const {
   orderedDocSections,
   orderedDocsForArtifact,
 } = await import("../../scripts/docs/docs-utils.ts");
-const { buildDocsArtifact, compileMarkdownBlocks } =
-  await import("../../scripts/docs/document-artifact.ts");
+const { buildDocsArtifact } = await import("../../scripts/docs/document-artifact.ts");
+const { compileMarkdownBlocks } = await import("../../scripts/docs/markdown-document.ts");
 const { buildSiteContentArtifact } = await import("../../scripts/content/build-site-content.ts");
 const {
   compileProjectArtifactManifest,
@@ -250,6 +250,26 @@ describe("native project artifacts", () => {
     expect(() => inWorkspace(() => buildSiteContentArtifact(output))).toThrow(
       "Expected JSON frontmatter",
     );
+  });
+
+  test("keeps shared legend links reachable without changing the project overview", () => {
+    seedProjectInputs();
+    writeSource(
+      "artifacts/diagrams/diagram-style-key.mmd",
+      "%% artifact-generator:version=1.0.0 lastUpdated=2026-08-18\nflowchart TB\n A --> B\n",
+    );
+    const path = join(sourceInputDirs.manifests, "project-artifacts.json");
+    const source = JSON.parse(readFileSync(path, "utf8"));
+    source.projects["artifact-generator"].diagramPaths.unshift("diagrams/diagram-style-key.svg");
+    writeFileSync(path, JSON.stringify(source));
+    compileProjectArtifactManifest(path);
+    const diagrams = JSON.parse(readFileSync(path, "utf8")).projects["artifact-generator"].diagrams;
+    expect(diagrams[0].overview).toBe(true);
+    expect(diagrams.at(-1)).toMatchObject({
+      id: "diagram-style-key",
+      title: "Diagram Style Key",
+      svgPath: "diagrams/diagram-style-key-v1.0.0-2026-08-18.svg",
+    });
   });
 
   test("assembles only native resources and keeps application coverage project-owned", async () => {

@@ -1,5 +1,5 @@
 import { TOML } from "bun";
-import { readText, writeText } from "../core/bun-native-fs.ts";
+import { readText, writeText } from "../core/file-system.ts";
 import { repoFiles } from "../core/script-constants.ts";
 import { logCaughtError, logSuccess } from "../core/script-logger.ts";
 import { isEntrypoint } from "../core/script-entry.ts";

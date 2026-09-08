@@ -1,5 +1,5 @@
 import { artifactPaths } from "../core/script-constants.ts";
-import { removePath } from "../core/bun-native-fs.ts";
+import { removePath } from "../core/file-system.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logSuccess } from "../core/script-logger.ts";
 

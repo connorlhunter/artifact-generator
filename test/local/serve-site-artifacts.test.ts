@@ -51,6 +51,11 @@ describe("local artifact server", () => {
     expect(localArtifactPath("docs/cipher/index.json", workspace, bundle)).toBe(docs);
     expect(localArtifactPath("", workspace, bundle)).toBeUndefined();
     expect(localArtifactPath("../private.json", workspace, bundle)).toBeUndefined();
+    expect(localArtifactPath("docs/cipher", workspace, bundle)).toBeUndefined();
+    expect(localArtifactPath("docs/cipher/index.json/nested", workspace, bundle)).toBeUndefined();
+    expect(
+      localArtifactPath("projects/constructor/coverage/index.json", workspace, bundle),
+    ).toBeUndefined();
   });
 
   test("rejects unsafe request paths before resolving a local artifact", () => {
@@ -64,6 +69,7 @@ describe("local artifact server", () => {
       artifactRequestPath(new Request("http://localhost/projects/%5cprivate.json")),
     ).toBeUndefined();
     expect(artifactRequestPath(new Request("http://localhost/"))).toBeUndefined();
+    expect(artifactRequestPath(new Request("http://localhost/%00file.json"))).toBeUndefined();
     expect(artifactRequestPath({ url: "http://%" } as Request)).toBeUndefined();
   });
 
@@ -95,6 +101,22 @@ describe("local artifact server", () => {
     expect(found.status).toBe(200);
     expect(await found.text()).toContain('"schemaVersion":2');
     expect(missing.status).toBe(404);
+    const head = localArtifactResponse(
+      new Request("http://localhost/projects/cipher/coverage/index.json", { method: "HEAD" }),
+      workspace,
+      bundle,
+    );
+    expect(head.status).toBe(200);
+    expect(head.body).toBeNull();
+    expect(head.headers.get("content-length")).toBe(found.headers.get("content-length"));
+    expect(head.headers.get("content-type")).toContain("application/json");
+    const post = localArtifactResponse(
+      new Request("http://localhost/projects/cipher/coverage/index.json", { method: "POST" }),
+      workspace,
+      bundle,
+    );
+    expect(post.status).toBe(405);
+    expect(post.headers.get("allow")).toBe("GET, HEAD, OPTIONS");
     expect(artifactResponseHeaders()).toMatchObject({
       "access-control-allow-origin": "*",
       "cache-control": "no-store",

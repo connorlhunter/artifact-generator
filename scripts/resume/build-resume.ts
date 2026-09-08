@@ -1,8 +1,8 @@
 import { cpSync, existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { TOML } from "bun";
 import type { CommandContext, CommandOptions, CommandOutput } from "../core/command-types.ts";
-import { copyFile, ensureDirectory, removePath } from "../core/bun-native-fs.ts";
+import { copyFile, removePath, writeAtomically } from "../core/file-system.ts";
 import { artifactPaths, executables, sourceInputDirs } from "../core/script-constants.ts";
 import { isEntrypoint } from "../core/script-entry.ts";
 import { logCaughtError, logHeading, logSuccess } from "../core/script-logger.ts";
@@ -75,6 +75,12 @@ export async function readResumeProjectConfig(
     throw new Error(`Resume source config must define a named PDF output: ${configPath}`);
   }
 
+  for (const name of [documentName, outputName]) {
+    if (name === "." || name === ".." || /[\\/\u0000-\u001f\u007f]/u.test(name)) {
+      throw new Error(`Resume project names must be single path components: ${configPath}`);
+    }
+  }
+
   return { documentName, outputName };
 }
 
@@ -115,8 +121,11 @@ export async function buildResume(options: BuildResumeOptions = {}): Promise<str
   const runner = options.runner ?? runCommand;
   const project = await readResumeProjectConfig(sourceDirectory);
 
-  if (resolve(sourceDirectory) === resolve(buildDirectory)) {
+  if (overlap(sourceDirectory, buildDirectory)) {
     throw new Error("Resume build directory must be separate from the selected source directory.");
+  }
+  if (overlap(sourceDirectory, outputPdf) || overlap(buildDirectory, outputPdf)) {
+    throw new Error("Resume output must be outside the source and build directories.");
   }
 
   const generatedPdf =
@@ -124,7 +133,6 @@ export async function buildResume(options: BuildResumeOptions = {}): Promise<str
     join(buildDirectory, "build", project.documentName, `${project.outputName}.pdf`);
 
   await removePath(buildDirectory);
-  await removePath(outputPdf);
   cpSync(sourceDirectory, buildDirectory, {
     dereference: true,
     filter: (path) => {
@@ -144,8 +152,7 @@ export async function buildResume(options: BuildResumeOptions = {}): Promise<str
     );
 
     validateResumePdf(generatedPdf);
-    ensureDirectory(dirname(outputPdf));
-    await copyFile(generatedPdf, outputPdf);
+    await writeAtomically(outputPdf, (temporary) => copyFile(generatedPdf, temporary));
     logSuccess(`Built resume: ${outputPdf}`);
   } finally {
     await removePath(buildDirectory);
@@ -156,6 +163,12 @@ export async function buildResume(options: BuildResumeOptions = {}): Promise<str
 
 function nonEmptyString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function overlap(left: string, right: string): boolean {
+  const a = resolve(left);
+  const b = resolve(right);
+  return a === b || a.startsWith(`${b}${sep}`) || b.startsWith(`${a}${sep}`);
 }
 
 /* istanbul ignore next */

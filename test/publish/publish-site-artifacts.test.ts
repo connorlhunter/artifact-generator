@@ -1,4 +1,8 @@
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createPublishFixture } from "../resources/publish-fixture.ts";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import {
   publishSiteArtifacts,
   publishDestinations,
@@ -16,9 +20,19 @@ const envKeys = [
 ] as const;
 
 describe("publish site artifacts", () => {
+  let root: string;
+  let fixture: ReturnType<typeof createPublishFixture>;
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "publish-test-"));
+    fixture = createPublishFixture(root);
+    process.env.ARTIFACTS_BUCKET = "artifact-bucket";
+    process.env.ASSETS_BUCKET = "asset-bucket";
+  });
   const originalEnv = new Map(envKeys.map((key) => [key, process.env[key]]));
 
   afterEach(() => {
+    spyOn(console, "log").mockRestore();
+    rmSync(root, { recursive: true, force: true });
     for (const key of envKeys) {
       const value = originalEnv.get(key);
       if (value === undefined) {
@@ -130,7 +144,7 @@ describe("publish site artifacts", () => {
           cloudFrontDistributionId: "artifact-distribution",
           label: "Artifact bundle",
           prefix: "",
-          source: "dist/site-artifacts",
+          source: fixture.artifacts,
           syncFilters: ["--exclude", "projects/*/coverage/*"],
         },
         {
@@ -138,7 +152,7 @@ describe("publish site artifacts", () => {
           cloudFrontDistributionId: "",
           label: "Asset bundle",
           prefix: "site-assets",
-          source: "dist/site-assets",
+          source: fixture.assets,
           syncFilters: [],
         },
       ],
@@ -149,7 +163,7 @@ describe("publish site artifacts", () => {
         args: [
           "s3",
           "sync",
-          "dist/site-artifacts",
+          fixture.artifacts,
           "s3://artifact-bucket/",
           "--delete",
           "--exclude",
@@ -158,7 +172,7 @@ describe("publish site artifacts", () => {
         subject: "Artifact bundle",
       },
       {
-        args: ["s3", "sync", "dist/site-assets", "s3://asset-bucket/site-assets/", "--delete"],
+        args: ["s3", "sync", fixture.assets, "s3://asset-bucket/site-assets/", "--delete"],
         subject: "Asset bundle",
       },
       {
@@ -174,5 +188,43 @@ describe("publish site artifacts", () => {
       },
     ]);
     expect(String(log.mock.calls.at(-1)?.[0])).toContain("Published generated artifacts to S3");
+  });
+
+  test("validates the complete bundle before issuing any AWS commands", async () => {
+    const commands: string[][] = [];
+    rmSync(join(fixture.assets, "resume/connor-hunter-resume.pdf"));
+    await expect(
+      publishSiteArtifacts({
+        destinations: publishDestinations().map((destination) => ({
+          ...destination,
+          source: destination.label === "Artifact bundle" ? fixture.artifacts : fixture.assets,
+        })),
+        commandRunner: async (_command, args) => {
+          commands.push([...args]);
+          return { stderr: "", stdout: "" };
+        },
+      }),
+    ).rejects.toThrow();
+    expect(commands).toEqual([]);
+  });
+
+  test("does not invalidate CloudFront after a failed upload", async () => {
+    spyOn(console, "log").mockImplementation(() => undefined);
+    const commands: string[][] = [];
+    await expect(
+      publishSiteArtifacts({
+        destinations: publishDestinations().map((destination) => ({
+          ...destination,
+          cloudFrontDistributionId: "distribution",
+          source: destination.label === "Artifact bundle" ? fixture.artifacts : fixture.assets,
+        })),
+        commandRunner: async (_command, args) => {
+          commands.push([...args]);
+          throw new Error("Upload interrupted");
+        },
+      }),
+    ).rejects.toThrow("Upload interrupted");
+    expect(commands).toHaveLength(1);
+    expect(commands[0]?.slice(0, 2)).toEqual(["s3", "sync"]);
   });
 });

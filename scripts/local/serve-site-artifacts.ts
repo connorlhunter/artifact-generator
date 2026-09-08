@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { isEntrypoint } from "../core/script-entry.ts";
 
@@ -16,6 +16,14 @@ const projectDirectories = {
 
 type LocalProjectSlug = keyof typeof projectDirectories;
 type ProjectArtifactKind = "changelog" | "coverage";
+
+function isFile(path: string): boolean {
+  try {
+    return statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
+  } catch {
+    return false;
+  }
+}
 
 /** Optional local roots used when serving a prepared artifact bundle. */
 export interface ServeLocalArtifactsOptions {
@@ -58,19 +66,19 @@ export function localArtifactPath(
 
   if (
     projects === "projects" &&
-    projectSlug in projectDirectories &&
+    Object.hasOwn(projectDirectories, projectSlug) &&
     (kind === "coverage" || kind === "changelog") &&
     typeof filename === "string" &&
     parts.length === 4
   ) {
     const projectPath = localProjectArtifactPath(projectSlug, kind, filename, root);
-    if (projectPath && existsSync(projectPath)) return projectPath;
+    if (projectPath && isFile(projectPath)) return projectPath;
   }
 
   const bundlePath = resolve(bundleRoot, relativePath);
   if (bundlePath === bundleRoot || !bundlePath.startsWith(`${bundleRoot}${sep}`)) return undefined;
 
-  return existsSync(bundlePath) ? bundlePath : undefined;
+  return isFile(bundlePath) ? bundlePath : undefined;
 }
 
 /** Returns a safe relative artifact path from a public request. */
@@ -86,7 +94,7 @@ export function artifactRequestPath(request: Request): string | undefined {
   const relativePath = pathname.replace(/^\/+/, "");
   if (
     !relativePath ||
-    relativePath.includes("\\") ||
+    /[\\\u0000-\u001f\u007f]/u.test(relativePath) ||
     relativePath.split("/").some((part) => part === "." || part === "..")
   ) {
     return undefined;
@@ -99,6 +107,7 @@ export function artifactRequestPath(request: Request): string | undefined {
 export function artifactResponseHeaders(): HeadersInit {
   return {
     "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET, HEAD, OPTIONS",
     "cache-control": "no-store",
   };
 }
@@ -112,13 +121,23 @@ export function localArtifactResponse(
   if (request.method === "OPTIONS") {
     return new Response(null, { headers: artifactResponseHeaders() });
   }
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { ...artifactResponseHeaders(), allow: "GET, HEAD, OPTIONS" },
+    });
+  }
 
   const relativePath = artifactRequestPath(request);
   const path = relativePath && localArtifactPath(relativePath, root, bundleRoot);
 
   if (!path) return new Response("Not found", { status: 404, headers: artifactResponseHeaders() });
 
-  return new Response(Bun.file(path), { headers: artifactResponseHeaders() });
+  const file = Bun.file(path);
+  const headers = new Headers(artifactResponseHeaders());
+  headers.set("content-type", file.type);
+  headers.set("content-length", String(file.size));
+  return new Response(request.method === "HEAD" ? null : file, { headers });
 }
 
 /** Starts a local public-artifact server with project-owned report overlays. */
@@ -137,7 +156,7 @@ export function serveLocalArtifacts(
 }
 
 if (isEntrypoint(import.meta.url)) {
-  const port = Number.parseInt(process.env.LOCAL_ARTIFACTS_PORT ?? `${defaultPort}`, 10);
+  const port = Number(process.env.LOCAL_ARTIFACTS_PORT ?? defaultPort);
 
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
     throw new Error("LOCAL_ARTIFACTS_PORT must be a valid TCP port.");

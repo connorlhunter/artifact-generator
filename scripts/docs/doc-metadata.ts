@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readText } from "../core/bun-native-fs.ts";
+import { readText } from "../core/file-system.ts";
 import {
   parseVersionedArtifactMetadata,
   type VersionedArtifactMetadata,
@@ -32,9 +32,10 @@ export async function readDocumentMetadata(
   if (!existsSync(path)) return undefined;
 
   let value: unknown;
+  const contents = await readText(path);
 
   try {
-    value = JSON.parse(await readText(path));
+    value = JSON.parse(contents);
   } catch {
     throw new Error(`${path} must contain valid JSON.`);
   }
@@ -54,7 +55,7 @@ export async function readDocumentMetadata(
   );
   const canonical = JSON.stringify(metadata, null, 2);
 
-  if ((await readText(path)).trim() !== canonical) {
+  if (contents.trim() !== canonical) {
     throw new Error(`${path} must use canonical document metadata JSON.`);
   }
 

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { join } from "node:path";
 import {
   cleanPublishOutputs,
+  compileProjectArtifactManifest,
   copyDocsArtifact,
   publishOutputs,
   sanitizeContentManifest,
@@ -23,6 +24,20 @@ afterEach(() => {
 });
 
 describe("assemble site artifacts", () => {
+  test("rejects invalid source paths before copying or reading artifacts", () => {
+    for (const slug of ["../escape", "bad/slug", "%2e%2e"])
+      expect(() => copyDocsArtifact(slug)).toThrow("Invalid project slug");
+    const manifest = join(temporaryDirectory, "manifest.json");
+    for (const project of [
+      { iconPath: "asset://icon.svg", diagramPaths: ["diagrams/example/../../outside.svg"] },
+      { iconPath: "asset://icon.svg", diagramPaths: [null] },
+      { iconPath: "asset://icon.svg", diagramPaths: [], coverageComingSoon: "false" },
+      { iconPath: "asset://icon.svg", diagramPaths: [], overviewDiagramPath: 1 },
+    ]) {
+      writeFileSync(manifest, JSON.stringify({ projects: { example: project } }));
+      expect(() => compileProjectArtifactManifest(manifest)).toThrow();
+    }
+  });
   test("copies a structured docs collection into the public bundle", () => {
     const source = join("dist", "docs-artifacts", "example");
     const output = join(publishOutputs.siteArtifacts, "docs", "example", "index.json");

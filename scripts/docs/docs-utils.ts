@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
+import { readProjectManifest } from "../content/project-manifest.ts";
 import { repoDirs, sourceInputDirs } from "../core/script-constants.ts";
 import { formatDocLabel, formatDocSectionTitle } from "./docs-labels.ts";
 import { documentMetadataFile } from "./doc-metadata.ts";
@@ -61,10 +62,6 @@ const ignoredDirs = new Set([".git", repoDirs.coverage, repoDirs.dist, repoDirs.
 const ignoredFiles = new Set(["temp.md"]);
 const overviewDocSuffix = "-overview.md";
 const projectManifestPath = join(sourceInputDirs.manifests, "project-artifacts.json");
-
-interface ProjectArtifactManifest {
-  readonly projects?: Record<string, unknown>;
-}
 
 /**
  * Returns true when a path exists and is a directory.
@@ -244,8 +241,8 @@ export function artifactProjectSlug(
   requestedProject: string,
   manifestPath = projectManifestPath,
 ): string {
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectArtifactManifest;
-  const project = Object.keys(manifest.projects ?? {}).find((slug) => slug === requestedProject);
+  const projects = readProjectManifest(manifestPath);
+  const project = Object.keys(projects).find((slug) => slug === requestedProject);
 
   if (project === undefined) {
     throw new Error(`Unknown docs project: ${requestedProject}`);

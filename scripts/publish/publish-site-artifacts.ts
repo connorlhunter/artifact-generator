@@ -1,3 +1,4 @@
+import { validateSiteArtifacts } from "./validate-site-artifacts.ts";
 import { publishOutputs } from "./assemble-site-artifacts.ts";
 import { envValue, requiredEnv } from "../core/environment.ts";
 import { runCommand } from "../core/process-utils.ts";
@@ -124,6 +125,10 @@ export async function publishSiteArtifacts(
 ): Promise<void> {
   const commandRunner = options.commandRunner ?? runCommand;
   const destinations = options.destinations ?? publishDestinations();
+  const artifacts = destinations.find((destination) => destination.label === "Artifact bundle");
+  const assets = destinations.find((destination) => destination.label === "Asset bundle");
+  if (!artifacts || !assets) throw new Error("Both artifact and asset bundles are required.");
+  validateSiteArtifacts(artifacts.source, assets.source);
   logHeading("Publishing generated artifacts to S3", { count: destinations.length });
 
   for (const destination of destinations) {

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 const removePath = mock<(path: string) => Promise<void>>();
 const logSuccess = mock<(message: string) => void>();
 
-mock.module("../../scripts/core/bun-native-fs.ts", () => ({
+mock.module("../../scripts/core/file-system.ts", () => ({
   removePath,
 }));
 
