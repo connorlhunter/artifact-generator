@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.7.8] - 2026-09-08
+
+### Fixed
+
+- Keep report titles with release notes and compact standalone reference lists.
+- Preserve inline text and links within PDF paragraphs.
+- Share diagram legends across project readers.
+
+### Changed
+
+- Refresh project technology lists, verification docs, and resume skills.
+- Update Bun types, Markdown parsing, and the CI browser setup action.
+
 ## 1.7.7 - 2026-09-05
 
 ### Changed
